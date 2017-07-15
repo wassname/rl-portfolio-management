@@ -224,16 +224,19 @@ class PortfolioEnv(gym.Env):
             info[i]['index'] = self.src.data.index[:self.src.step][i]
             info[i]['steps'] = i
 
-        # for keras-rl FIXME
+        # for keras-rl it only wants a single dict of numberic values FIXME
         info = info[0]
-        if 'weights' in info: del info['weights']
+        if 'weights' in info:
+            del info['weights']
         info['returns'] = info['returns'].mean()
+        del info['index']
 
         return observation, reward, done1 + done2, info
 
     def _reset(self):
         self.sim.reset()
         self.src.reset()
+        self.infos = []
         observation, reward, done, info = self.step(self.sim.w0)
         return observation
 
