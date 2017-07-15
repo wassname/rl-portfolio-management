@@ -24,22 +24,24 @@ class DataSrc(object):
         self.augument = augument
         self.scale = scale
 
+        df = df.copy()
 
         # add return/y1 as last col
         pairs = df.columns.levels[0]
         for pair in pairs:
             x = df[pair].close
-            df[pair, "return"] = (x + eps*2) / (x.shift() + eps)
+            df[pair, "return"] = (x + eps) / (x.shift() + eps)
         df = df[1:]
 
         # data processing
         if scale:
-            # df = (df - df.mean(0) + eps) / (df.max(0) - df.min(0) + eps)
-            df = df.apply(lambda x: normalize(x))
+            # don't normalize return
+            df = df.apply(
+                lambda x: normalize(x) if x.name[1] != 'return' else x)
 
         # get rid of NaN's
-        df = df.fillna(method="pad")
         df.replace(np.nan, 0, inplace=True)
+        df = df.fillna(method="pad")
 
         self._data = df.copy()
         self.asset_names = self._data.columns.levels[0].tolist()
@@ -64,8 +66,10 @@ class DataSrc(object):
         data = self._data[self.idx:self.idx + self.steps].copy()
 
         # scale each run to the begining of the episode so they look the same
+        # but not return
         if self.scale:
-            data = data.apply(lambda x: scale_to_start(x))
+            data = data.apply(
+                lambda x: scale_to_start(x) if x.name[1] != 'return' else x)
 
         # augument data to prevent overfitting
         data = data.apply(lambda x: random_shift(x, self.augument))

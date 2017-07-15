@@ -10,9 +10,9 @@ def test_random_shift():
     assert (s == s1).all(), 'should not do anything if given 0'
 
     s2 = random_shift(s.copy(), 0.05)
-    assert (s2 / s).max() > 1.0, 'should shift more than 0.00 given 0.05'
-    assert (s2 / s).max() < 1.1, 'should shift less than 0.10 given 0.05'
-    np.testing.assert_almost_equal((s2 / s).mean(), 1.00, 2)
+    shift = (s2 / s)
+    np.testing.assert_almost_equal(shift.mean(), 1.00, 2)
+    np.testing.assert_almost_equal(shift.max(), 1.05, 2)
 
 
 def test_normalize():
