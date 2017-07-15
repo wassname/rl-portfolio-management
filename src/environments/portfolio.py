@@ -3,25 +3,8 @@ import numpy as np
 import gym
 import gym.spaces
 
-eps = 1e-7
-
-
-def random_shift(x, fraction):
-    min_x, max_x = np.min(x), np.max(x)
-    m = np.random.uniform(-fraction, fraction, size=x.shape) + 1
-    c = np.random.uniform(-fraction, fraction, size=x.shape) * x.std()
-    return np.clip(x * m + c, min_x, max_x)
-
-
-def normalise(x):
-    x = (x - x.min()) / (x.std + eps)
-    return x
-
-
-def scale_to_start(x):
-    """Scale episode so that it starts at one."""
-    x = (x + eps) / (x[0] + eps)
-    return x
+from ..config import eps
+from ..data.utils import normalize, random_shift, scale_to_start
 
 
 class DataSrc(object):
@@ -51,7 +34,8 @@ class DataSrc(object):
 
         # data processing
         if scale:
-            df = (df - df.mean(0) + eps) / (df.max(0) - df.min(0) + eps)
+            # df = (df - df.mean(0) + eps) / (df.max(0) - df.min(0) + eps)
+            df = df.apply(lambda x: normalize(x))
 
         # get rid of NaN's
         df = df.fillna(method="pad")
