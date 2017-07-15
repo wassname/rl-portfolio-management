@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
 
 import gym
 import gym.spaces
@@ -87,8 +89,9 @@ class PortfolioSim(object):
     Based of [Jiang 2017](https://arxiv.org/abs/1706.10059)
     """
 
-    def __init__(self, asset_names=[], trading_cost_bps=0.0025):
-        self.cost = trading_cost_bps
+    def __init__(self, asset_names=[], trading_cost=0.0025, time_cost=0.0):
+        self.cost = trading_cost
+        self.time_cost = time_cost
         self.asset_names = asset_names
         self.reset()
 
@@ -111,6 +114,9 @@ class PortfolioSim(object):
             np.abs(dw1 - w1)).sum()  # (eq16) cost to change portfolio
 
         p1 = p0 * (1 - mu1) * np.dot(y1, w0)  # (eq11) final portfolio value
+
+        p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
+
         p1 = np.clip(p1, 0, np.inf)
         # print(dict(mu1=mu1,p1=p1,dw1=dw1,y1=y1))
 
@@ -151,23 +157,41 @@ class PortfolioEnv(gym.Env):
     Based on [Jiang 2017](https://arxiv.org/abs/1706.10059)
     """
 
+    metadata = {'render.modes': ['human']}
+
     def __init__(self,
                  df,
                  steps=256,
                  scale=True,
                  augument=0.00,
-                 trading_cost_bps=0.0025):
+                 trading_cost=0.0025,
+                 time_cost=0.00):
+        """
+        An environment for financial portfolio management.
+
+        Params:
+            df - data frame index of timestamps
+                 and multi-index columns levels=[['LTCBTC'],...],['close',...]]
+            steps - steps in episode
+            scale - scale data and each episode (except return)
+            augument - fraction to randomly shift data by
+            trading_cost - cost of trade as a fraction
+            time_cost - cost of holding as a fraction
+        """
         self.src = DataSrc(df=df, steps=steps, scale=scale, augument=augument)
 
         self.sim = PortfolioSim(
             asset_names=self.src.asset_names,
-            trading_cost_bps=trading_cost_bps)
+            trading_cost=trading_cost,
+            time_cost=time_cost)
 
         # openai gym attributes
+        # action will be the portfolio weights from 0 to 1 for each asset
         self.action_space = gym.spaces.Box(
             0, 1, shape=len(self.src.asset_names))
 
-        gym.spaces.Box(
+        # get the observation space from the data min and max
+        self.observation_space = gym.spaces.Box(
             np.array([
                 self.src._data[pair].min().values
                 for pair in self.src.asset_names
@@ -176,10 +200,11 @@ class PortfolioEnv(gym.Env):
                 self.src._data[pair].max().values
                 for pair in self.src.asset_names
             ]), )
-
         self._reset()
 
     def _step(self, action):
+        if isinstance(action, list):
+            action = action[0]
         np.testing.assert_almost_equal(
             np.sum(action), 1.0, 4, err_msg='action should be sum to 1')
         observation, done1 = self.src._step()
@@ -187,12 +212,75 @@ class PortfolioEnv(gym.Env):
         y1 = observation[:, -1]  # relative price vector (return)
         reward, info, done2 = self.sim._step(action, y1)
 
+        # add dates
+        for i in range(len(info)):
+            info[i]['index'] = self.src.data.index[:self.src.step][i]
+            info[i]['steps'] = i
+
         return observation, reward, done1 + done2, info
 
     def _reset(self):
         self.sim.reset()
         self.src.reset()
-        return self.step(self.sim.w0)
+        observation, reward, done, info = self.step(self.sim.w0)
+        return observation
 
     def _render(self, mode='human', close=False):
+        if close:
+            return
         pass
+        # if mode == 'ansi':
+        #     info = self.sim.infos
+        #     df_info = pd.DataFrame(info)
+        #     df_returns = pd.DataFrame(
+        #         np.stack(df_info.returns.values),
+        #         columns=self.sim.asset_names,
+        #         index=df_info.index)
+        #     df_weights = pd.DataFrame(
+        #         np.stack(df_info.weights.values),
+        #         columns=self.sim.asset_names,
+        #         index=df_info.index)
+        #     print('Gain:\n', df_weights.iloc[-1] * (df_returns.iloc[-1] - 1))
+        # elif mode=='human':
+        #     self.plot()
+
+    def plot(self):
+
+        info = self.sim.infos
+        # add dates
+        for i in range(len(info)):
+            info[i]['index'] = self.src.data.index[:self.src.step][i]
+
+        # make dataframes
+        df_info = pd.DataFrame(info)
+        df_info.index = df_info['index']
+        del df_info['index']
+
+        df_returns = pd.DataFrame(
+            np.stack(df_info.returns.values),
+            columns=self.sim.asset_names,
+            index=df_info.index)
+        df_weights = pd.DataFrame(
+            np.stack(df_info.weights.values),
+            columns=self.sim.asset_names,
+            index=df_info.index)
+        df_quantity = (df_returns * df_weights)
+        df_info = df_info.drop(['returns', 'weights'], axis=1)
+
+        # plots
+        # (df_returns-1).plot(title='returns')
+        # plt.show()
+
+        # df_info.portfolio_value.plot(title='portfolio_value', ylim=[0, 2])
+        # plt.show()
+        df_quantity.plot.area(title='portfolio value')
+        plt.show()
+
+        df_weights.plot.area(title='portfolio weights', ylim=[0, 1])
+        plt.show()
+
+        # (df_returns.iloc[-1]-1).plot('bar', title='change')
+        # plt.show()
+
+        # (df_quantity.iloc[-1]).plot('pie', title='step distribution')
+        # plt.show()
