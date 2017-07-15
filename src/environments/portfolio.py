@@ -203,10 +203,17 @@ class PortfolioEnv(gym.Env):
         self._reset()
 
     def _step(self, action):
-        if isinstance(action, list):
-            action = action[0]
+        # if isinstance(action, list):
+        #     action = action[0]
+
+        # normalise just in case
+        action = np.clip(action, 0, 1)
+        action /= (action.sum() + 1e-7)
+
+        assert ((action >= 0) * (action <= 1)).all(), 'all action values should be between 0 and 1. Not %s' % action
         np.testing.assert_almost_equal(
-            np.sum(action), 1.0, 4, err_msg='action should be sum to 1')
+            np.sum(action), 1.0, 1, err_msg='action should be sum to 1. action="%s"' % action)
+
         observation, done1 = self.src._step()
 
         y1 = observation[:, -1]  # relative price vector (return)
@@ -216,6 +223,11 @@ class PortfolioEnv(gym.Env):
         for i in range(len(info)):
             info[i]['index'] = self.src.data.index[:self.src.step][i]
             info[i]['steps'] = i
+
+        # for keras-rl FIXME
+        info = info[0]
+        if 'weights' in info: del info['weights']
+        info['returns'] = info['returns'].mean()
 
         return observation, reward, done1 + done2, info
 
