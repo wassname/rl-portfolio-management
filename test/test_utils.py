@@ -19,7 +19,7 @@ def test_normalize():
     s = pd.Series(np.random.random(10)) * 10 + 3
     s1 = normalize(s)
     np.testing.assert_almost_equal(s1.std(), 1, err_msg='should make std 0')
-    np.testing.assert_almost_equal(s1.min(), 0, err_msg='')
+    np.testing.assert_almost_equal(s1.mean(), 0, err_msg='')
 
 
 def test_scale_to_start():

@@ -13,7 +13,7 @@ def random_shift(x, fraction):
 
 def normalize(x):
     """Normalize to a pandas series."""
-    x = (x - x.min()) / (x.std() + eps)
+    x = (x - x.mean()) / (x.std() + eps)
     return x
 
 
