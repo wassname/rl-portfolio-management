@@ -87,7 +87,7 @@ class PortfolioSim(object):
         self.asset_names = asset_names
         self.reset()
 
-    def _step(self, w1, y1, c1):
+    def _step(self, w1a, y1, c1):
         """
         Step.
 
@@ -95,14 +95,17 @@ class PortfolioSim(object):
         y1 - price relative vector also called return
             e.g. [1.0, 0.9, 1.1]
         c1 - conversion weights e.g [0.9, 0.9, 0.9]
-            (this means go 0.90 towards the new portfolio balance)
+            I use it as an easier way of incorperating the previous weights. Each one is fraction within [0,1] which tell you how much to rebalance the protfolio. If you are not confident c1=0.1
+            which mean you shift asset 1 0.10 of the way to the new balance to avoid incurring trading fees. This way the model controls cost by putting a high c value for confident actions and low for
+            uncertain actions.
         Numbered equations are from https://arxiv.org/abs/1706.10059
         """
         w0 = self.w0
         p0 = self.p0
 
         # take into account conversion weights
-        w1 = w0 + (w1 - w0) * c1
+        w1 = w0 + (w1a - w0) * c1
+        w1 /= w1.sum()
 
         dw1 = (y1 * w0) / (np.dot(y1, w0) + eps)  # (eq7) weights evolve into
 
@@ -114,8 +117,8 @@ class PortfolioSim(object):
         p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
 
         p1 = np.clip(p1, 0, np.inf)
-        if p1 > 1e3:
-            raise Exception("really? check this")
+        # if p1 > 1e3:
+            # raise Exception("really? check this")
         # print(dict(mu1=mu1,p1=p1,dw1=dw1,y1=y1))
 
         rho1 = p1 / p0 - 1  # rate of returns
@@ -212,11 +215,7 @@ class PortfolioEnv(gym.Env):
 
         Actions should be portfolio [cash_bias, w0..., c_cash, c0, c1...]
         - Where wn is a portfolio weight from 0 to 1. The first is cash_bias
-        - cn is the portfolio conversion weight, I use it as an easier way of
-            incorperating the previous weights. For c0=1 you completely rebalance asset 1
-            while for c0=0 you do not rebalance at all. This way the model controls
-            cost by putting a high f value for confident actions and low for
-            uncertain actions.
+        - cn is the portfolio conversion weights see PortioSim._step for description
         """
         np.testing.assert_almost_equal(
             action.shape,
@@ -228,13 +227,14 @@ class PortfolioEnv(gym.Env):
         nb_assets = len(self.src.asset_names)
 
         weights = action[:nb_assets]  # [cash_bias, w0, w1...]
-        weights /= (weights.sum() + 1e-7)
+        weights /= (weights.sum() + eps)
+        weights[0] += np.clip(1-weights.sum(),0,1)  # so if weights are all zeros we normalise to [1,0...]
 
         conversion_weights = action[nb_assets:]  # [c_cash, c0, c1...]
 
         assert ((action >= 0) * (action <= 1)).all(), 'all action values should be between 0 and 1. Not %s' % action
         np.testing.assert_almost_equal(
-            np.sum(weights), 1.0, 1, err_msg='weights should be sum to 1. action="%s"' % weights)
+            np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
 
         observation, done1 = self.src._step()
 
