@@ -65,7 +65,7 @@ class DataSrc(object):
         # get data for this episode
         self.idx = np.random.randint(
             low=0, high=len(self._data.index) - self.steps)
-        data = self._data[self.idx:self.idx + self.steps].copy()
+        data = self._data[self.idx:self.idx + self.steps+1].copy()
 
         # scale each run to the begining of the episode so they look the same
         # but not return
@@ -89,9 +89,10 @@ class PortfolioSim(object):
     Based of [Jiang 2017](https://arxiv.org/abs/1706.10059)
     """
 
-    def __init__(self, asset_names=[], trading_cost=0.0025, time_cost=0.0):
+    def __init__(self, asset_names=[], steps=128, trading_cost=0.0025, time_cost=0.0):
         self.cost = trading_cost
         self.time_cost = time_cost
+        self.steps = steps
         self.asset_names = asset_names
         self.reset()
 
@@ -122,6 +123,7 @@ class PortfolioSim(object):
 
         rho1 = p1 / p0 - 1  # rate of returns
         r1 = np.log((p1 + eps) / (p0 + eps))  # log rate of return
+        reward = r1 / self.steps  # (22) average logarithmic cumulated return
 
         # rememeber for next step
         self.w0 = w1
@@ -131,7 +133,8 @@ class PortfolioSim(object):
         done = p1 == 0
 
         info = {
-            "log_reward": r1,
+            "reward": reward,
+            "log_return": r1,
             "portfolio_value": p1,
             "returns": y1,
             "rate_of_return": rho1,
@@ -139,7 +142,7 @@ class PortfolioSim(object):
             "cost": mu1,
         }
         self.infos.append(info)
-        return r1, self.infos, done  # reward
+        return reward, info, done
 
     def reset(self):
         self.infos = []
@@ -183,7 +186,8 @@ class PortfolioEnv(gym.Env):
         self.sim = PortfolioSim(
             asset_names=self.src.asset_names,
             trading_cost=trading_cost,
-            time_cost=time_cost)
+            time_cost=time_cost,
+            steps=steps)
 
         # openai gym attributes
         # action will be the portfolio weights from 0 to 1 for each asset
@@ -199,7 +203,8 @@ class PortfolioEnv(gym.Env):
             np.array([
                 self.src._data[pair].max().values
                 for pair in self.src.asset_names
-            ]), )
+            ]),
+        )
         self._reset()
 
     def _step(self, action):
@@ -220,12 +225,11 @@ class PortfolioEnv(gym.Env):
         reward, info, done2 = self.sim._step(action, y1)
 
         # add dates
-        for i in range(len(info)):
-            info[i]['index'] = self.src.data.index[:self.src.step][i]
-            info[i]['steps'] = i
+        info['index'] = self.src.data.index[self.src.step]
+        info['steps'] = self.src.step
+        self.infos.append(info)
 
         # for keras-rl it only wants a single dict of numberic values FIXME
-        info = info[0]
         if 'weights' in info:
             del info['weights']
         info['returns'] = info['returns'].mean()
