@@ -54,14 +54,15 @@ def test_portfolio_env_hold():
     assert df.portfolio_value.iloc[-1] > 0.9999, 'portfolio should retain value if holding bitcoin'
 
 
-def test_return_not_scaled():
+def test_scaled():
     df = pd.read_hdf('./data/poliniex_30m.hf', key='train')
+
     np.random.seed(0)
     env1 = PortfolioEnv(df=df, scale=True)
+    obs1 = env1.reset()
+
     np.random.seed(0)
     env0 = PortfolioEnv(df=df, scale=False)
-    a = env0.src._data.xs('return', axis=1, level='Price').tail(5)
-    b = env1.src._data.xs('return', axis=1, level='Price').tail(5)
-    assert (a == b).all().all(), 'returns should not be scaled'
+    obs0 = env0.reset()
 
-    assert (env.step(env.sim.w0)[0][:,-1,3]==1).all(), 'close prices should be scaled to one at end'
+    assert obs0!=obs1
