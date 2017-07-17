@@ -12,3 +12,5 @@ seaborn==0.7.1
 pandas==0.20.3
 numpy==1.12.1
 matplotlib==2.0.0
+# misc
+tqdm==4.11.2

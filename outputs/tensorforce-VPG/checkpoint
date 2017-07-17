@@ -1,0 +1,2 @@
+model_checkpoint_path: "tensorforce-VPG_20170717_04-42-55.model"
+all_model_checkpoint_paths: "tensorforce-VPG_20170717_04-42-55.model"
