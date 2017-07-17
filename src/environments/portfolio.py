@@ -12,7 +12,7 @@ from ..data.utils import normalize, random_shift, scale_to_start
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, scale=True, augument=0.00, window_length=50):
+    def __init__(self, df, steps=252, scale=True, augment=0.00, window_length=50):
         """
         DataSrc.
 
@@ -20,10 +20,10 @@ class DataSrc(object):
              and multi-index columns levels=[['LTCBTC'],...],['close',...]]
         steps - total steps in episode
         scale - scale the data for each episode
-        augument - fraction to augument the data by
+        augment - fraction to augment the data by
         """
         self.steps = steps + 1
-        self.augument = augument
+        self.augment = augment
         self.scale = scale
         self.window_length = window_length
 
@@ -64,8 +64,8 @@ class DataSrc(object):
             low=self.window_length, high=len(self._data.index) - self.steps)
         data = self._data[self.idx - self.window_length:self.idx + self.steps + 1].copy()
 
-        # augument data to prevent overfitting
-        data = data.apply(lambda x: random_shift(x, self.augument))
+        # augment data to prevent overfitting
+        data = data.apply(lambda x: random_shift(x, self.augment))
 
         self.data = data
 
@@ -158,7 +158,7 @@ class PortfolioEnv(gym.Env):
                  df,
                  steps=256,
                  scale=True,
-                 augument=0.00,
+                 augment=0.00,
                  trading_cost=0.0025,
                  time_cost=0.00,
                  window_length=50,
@@ -171,12 +171,12 @@ class PortfolioEnv(gym.Env):
                  and multi-index columns levels=[['LTCBTC'],...],['close',...]]
             steps - steps in episode
             scale - scale data and each episode (except return)
-            augument - fraction to randomly shift data by
+            augment - fraction to randomly shift data by
             trading_cost - cost of trade as a fraction
             time_cost - cost of holding as a fraction
             window_length - how many past observations to return
         """
-        self.src = DataSrc(df=df, steps=steps, scale=scale, augument=augument, window_length=window_length)
+        self.src = DataSrc(df=df, steps=steps, scale=scale, augment=augment, window_length=window_length)
 
         self.sim = PortfolioSim(
             asset_names=self.src.asset_names,

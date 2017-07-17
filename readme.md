@@ -6,10 +6,11 @@ I also implemented an OpenAI gym environment for portfolio management (with unit
 
 The main differences from Jian et. al. 2017 are:
 
-- The first step is to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
+- The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
 - I have not used portfolio vector memory, which could lead to it incurring large trading costs. But as I have disabled trading costs this shouldn't be a problem.
-- I added some random shifts as data augumentation to prevent overfitting
+- I added some random shifts as data augmentation to prevent overfitting
 - As well as vanilla policy gradient I tried generalized advantage estimation and Deep DPG ([Lillicrap et al. 2015]( http://arxiv.org/pdf/1509.02971v2.pdf))
+- I tried to replicate the best CNN model from the paper (not the LSTM or RNN models)
 
 Author: wassname
 
@@ -25,8 +26,8 @@ I have not managed to overfit to the training data or generalise to the test dat
 - `cd $NAME`
 - `pip install -r requirements/requirements.txt`
 - `jupyter-notebook`
-    - Then open tensorforce-VPG and train
-    - Or try an alternative agent with keras-ddpg
+    - Then open keras-ddpg.ipynb in jupyter
+    - Or try an alternative agent  with tensorforce-VPG.ipynb and train
 
 # Details
 

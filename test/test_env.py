@@ -11,12 +11,12 @@ def test_env_outputs():
 
     obs1, reward, done, info = env.step(action)
     obs2 = env.reset()
-    assert obs1.shape == obs2.shape
+    assert obs1.shape == obs2.shape, 'rest and step should output same shaped observations'
 
     assert np.isfinite(reward)
     assert not done
-    for v in info.values():
-        assert np.isfinite(v)
+    for k, v in info.items():
+        assert np.isfinite(v), '%s=%s should be finite' % (k, v)
 
 def test_portfolio_env():
     df = pd.read_hdf('./data/poliniex_30m.hf', key='train')
@@ -37,6 +37,7 @@ def test_portfolio_env():
     df_info = pd.DataFrame(env.infos)
     final_value = df_info.portfolio_value.iloc[-1]
     assert final_value > 0.75, 'should retain most value with 20 random steps'
+    assert final_value < 1.10, 'should retain most value with 20 random steps'
 
 
 def test_portfolio_env_hold():
@@ -52,6 +53,7 @@ def test_portfolio_env_hold():
 
     df = pd.DataFrame(env.infos)
     assert df.portfolio_value.iloc[-1] > 0.9999, 'portfolio should retain value if holding bitcoin'
+    assert df.portfolio_value.iloc[-1] < 1.01, 'portfolio should retain value if holding bitcoin'
 
 
 def test_scaled():
