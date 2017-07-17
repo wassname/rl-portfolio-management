@@ -63,3 +63,5 @@ def test_return_not_scaled():
     a = env0.src._data.xs('return', axis=1, level='Price').tail(5)
     b = env1.src._data.xs('return', axis=1, level='Price').tail(5)
     assert (a == b).all().all(), 'returns should not be scaled'
+
+    assert (env.step(env.sim.w0)[0][:,-1,3]==1).all(), 'close prices should be scaled to one at end'
