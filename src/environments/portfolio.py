@@ -17,7 +17,7 @@ class DataSrc(object):
         DataSrc.
 
         df - csv for data frame index of timestamps
-             and multi-index columns levels=[['LTCBTC'],...],['close',...]]
+             and multi-index columns levels=[['LTCBTC'],...],['open','low','high','close']]
         steps - total steps in episode
         scale - scale the data for each episode
         augment - fraction to augment the data by
@@ -167,8 +167,8 @@ class PortfolioEnv(gym.Env):
         An environment for financial portfolio management.
 
         Params:
-            df - data frame index of timestamps
-                 and multi-index columns levels=[['LTCBTC'],...],['close',...]]
+            df - csv for data frame index of timestamps
+                 and multi-index columns levels=[['LTCBTC'],...],['open','low','high','close']]
             steps - steps in episode
             scale - scale data and each episode (except return)
             augment - fraction to randomly shift data by

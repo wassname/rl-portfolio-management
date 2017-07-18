@@ -3,7 +3,7 @@ import numpy as np
 from src.environments.portfolio import PortfolioEnv
 
 def test_env_outputs():
-    df = pd.read_hdf('./data/poliniex_30m.hf', key='train')
+    df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
     env = PortfolioEnv(df=df)
 
     action = np.random.random(env.action_space.shape)
@@ -19,7 +19,7 @@ def test_env_outputs():
         assert np.isfinite(v), '%s=%s should be finite' % (k, v)
 
 def test_portfolio_env():
-    df = pd.read_hdf('./data/poliniex_30m.hf', key='train')
+    df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
     asset_names = df.columns.levels[0]
 
     env = PortfolioEnv(df=df)
@@ -41,7 +41,7 @@ def test_portfolio_env():
 
 
 def test_portfolio_env_hold():
-    df = pd.read_hdf('./data/poliniex_30m.hf', key='train')
+    df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
     asset_names = df.columns.levels[0]
 
     np.random.seed(0)
@@ -57,7 +57,7 @@ def test_portfolio_env_hold():
 
 
 def test_scaled():
-    df = pd.read_hdf('./data/poliniex_30m.hf', key='train')
+    df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
 
     np.random.seed(0)
     env1 = PortfolioEnv(df=df, scale=True)

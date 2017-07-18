@@ -8,8 +8,7 @@ The main differences from Jian et. al. 2017 are:
 
 - The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
 - I have not used portfolio vector memory, which could lead to it incurring large trading costs. But as I have disabled trading costs this shouldn't be a problem.
-- I added some random shifts as data augmentation to prevent overfitting
-- As well as vanilla policy gradient I tried generalized advantage estimation and Deep DPG ([Lillicrap et al. 2015]( http://arxiv.org/pdf/1509.02971v2.pdf))
+- Instead of DPG (Deterinate policy gradient) I tried and DDPG (deep determinate policy gradient ([Lillicrap et al. 2015]( http://arxiv.org/pdf/1509.02971v2.pdf))) and VPG (vanilla policy gradient) with generalized advantage estimation.
 - I tried to replicate the best CNN model from the paper (not the LSTM or RNN models)
 
 Author: wassname
@@ -34,7 +33,7 @@ I have not managed to overfit to the training data or generalise to the test dat
 - enviroments/portfolio.py - contains an openai environment for porfolio trading
 - tensorforce-VPG.ipynb - notebook to try a policy gradient agent
 - keras-ddpg - notebook to try a Deep DPG agent
-- data/polinies_30m.hdf - hdf file with cryptocurrency 30 minutes prices
+- data/poloniex_30m.hdf - hdf file with cryptocurrency 30 minutes prices
 
 # Tests
 
