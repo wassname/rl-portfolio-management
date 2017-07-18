@@ -8,7 +8,7 @@ The main differences from Jiang et. al. 2017 are:
 
 - The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
 - I have not used portfolio vector memory Normally this would lead to it incurring large trading costs, but as I have disabled trading costs this shouldn't be a problem.
-- Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf))) and VPG (vanilla policy gradient) with generalized advantage estimation.
+- Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation.
 - I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
 
 Author: wassname
