@@ -1,4 +1,4 @@
-Attempting to replicate "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem" by [Jiang et. al. 2017](https://arxiv.org/abs/1706.10059).
+Attempting to replicate "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem" by [Jiang et. al. 2017](https://arxiv.org/abs/1706.10059) [1].
 
 This paper trains an agent to choose a good portfolio of cryptocurrencies. It's reported that it can give 4-fold returns in 50 days and the paper seems to do all the right things so I wanted to see if I could acheive the same results.
 
@@ -8,12 +8,14 @@ The main differences from Jian et. al. 2017 are:
 
 - The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
 - I have not used portfolio vector memory Normally this would lead to it incurring large trading costs, but as I have disabled trading costs this shouldn't be a problem.
-- Instead of DPG (Deterinate policy gradient) I tried and DDPG (deep determinate policy gradient ([Lillicrap et al. 2015]( http://arxiv.org/pdf/1509.02971v2.pdf))) and VPG (vanilla policy gradient) with generalized advantage estimation.
+- Instead of DPG (deterministic policy gradient) I tried and DDPG (deep deterministic policy gradient ([Lillicrap et al. 2015]( http://arxiv.org/pdf/1509.02971v2.pdf))) and VPG (vanilla policy gradient) with generalized advantage estimation.
 - I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
 
 Author: wassname
 
 License: AGPLv3
+
+[[1](https://arxiv.org/abs/1706.10059)] Jiang, Zhengyao, Dixing Xu, and Jinjun Liang. "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem." *arXiv preprint arXiv:1706.10059* (2017).
 
 # Results
 
