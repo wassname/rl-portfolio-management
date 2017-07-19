@@ -21,6 +21,8 @@ License: AGPLv3
 
 I have not managed to overfit to the training data or generalise to the test data. So far there have been poor results. I have not yet tried hyperparameter optimisation so it could be that parameter tweaking will allow the model to fit.
 
+![](docs/tensorforce-VPG-test.png)
+
 # Installing
 
 - `git clone $REPO`
