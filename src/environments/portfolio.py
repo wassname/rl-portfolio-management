@@ -219,7 +219,7 @@ class PortfolioEnv(gym.Env):
 
         weights = action  # [cash_bias, w0, w1...]
         weights /= (weights.sum() + eps)
-        weights[0] += np.clip(1  -weights.sum(), 0, 1)  # so if weights are all zeros we normalise to [1,0...]
+        weights[0] += np.clip(1 - weights.sum(), 0, 1)  # so if weights are all zeros we normalise to [1,0...]
 
         assert ((action >= 0) * (action <= 1)).all(), 'all action values should be between 0 and 1. Not %s' % action
         np.testing.assert_almost_equal(
@@ -234,12 +234,15 @@ class PortfolioEnv(gym.Env):
         # add dates
         info['index'] = self.src.data.index[self.src.step]
         info['steps'] = self.src.step
-        self.infos.append(info)
+        info['cash_bias'] = info['weights'][0]
+        info['mean_market_returns'] = info['returns'].mean()
+        self.infos.append(info.copy())
 
-        # for keras-rl it only wants a single dict of numberic values FIXME
+        # for keras-rl it only wants a single dict of numberic values
         if 'weights' in info:
+            info['cash_bias'] = info['weights'][0]
             del info['weights']
-        info['returns'] = info['returns'].mean()
+        del info['returns']
         del info['index']
 
         return observation, reward, done1 + done2, info
