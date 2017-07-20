@@ -7,9 +7,10 @@ This repo includes an environment for portfolio management (with unit tests). Ho
 The main differences from Jiang et. al. 2017 are:
 
 - The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
-- I have not used portfolio vector memory Normally this would lead to it incurring large trading costs, but as I have disabled trading costs this shouldn't be a problem.
+- I have not used portfolio vector memory. Normally this would lead to it incurring large trading costs, but as I have disabled trading costs this shouldn't be a problem.
 - Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation.
 - I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
+- instead of selecting 12 assets for each window I chose 8 assets that have existed for the longest time
 
 Author: wassname
 
@@ -21,12 +22,18 @@ License: AGPLv3
 
 I have not managed to overfit to the training data or generalise to the test data. So far there have been poor results. I have not yet tried hyperparameter optimisation so it could be that parameter tweaking will allow the model to fit.
 
+- VPG model, training: 1.008 in 15 hours, 1.9 in 50 days
+- VPG model, test: 1.00 in 15 hours, 1.0 in 50 days
+- DDPG model, test
+
 ![](docs/tensorforce-VPG-test.png)
+
+This test period is directly after the training period and it looks like the usefullness of the models learned knowledge may be decaying as it moved further away from it's test interval.
 
 # Installing
 
-- `git clone $REPO`
-- `cd $NAME`
+- `git clone https://github.com/wassname/rl-portfolio-management.git`
+- `cd rl-portfolio-management`
 - `pip install -r requirements/requirements.txt`
 - `jupyter-notebook`
     - Then open keras-ddpg.ipynb in jupyter
