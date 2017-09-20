@@ -11,6 +11,7 @@ The main differences from Jiang et. al. 2017 are:
 - Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation.
 - I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
 - instead of selecting 12 assets for each window I chose 8 assets that have existed for the longest time
+- My topology had an extra layer [see issue 3](https://github.com/wassname/rl-portfolio-management/issues/3)
 
 Author: wassname
 
