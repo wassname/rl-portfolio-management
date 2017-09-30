@@ -19,6 +19,10 @@ License: AGPLv3
 
 [[1](https://arxiv.org/abs/1706.10059)] Jiang, Zhengyao, Dixing Xu, and Jinjun Liang. "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem." *arXiv preprint arXiv:1706.10059* (2017).
 
+# TODO
+
+See issue #4 and #2 for ideas on where to go from here
+
 # Results
 
 I have not managed to overfit to the training data or generalise to the test data. So far there have been poor results. I have not yet tried hyperparameter optimisation so it could be that parameter tweaking will allow the model to fit.
@@ -29,7 +33,7 @@ I have not managed to overfit to the training data or generalise to the test dat
 
 ![](docs/tensorforce-VPG-test.png)
 
-This test period is directly after the training period and it looks like the usefullness of the models learned knowledge may be decaying as it moved further away from it's test interval.
+This test period is directly after the training period and it looks like the usefullness of the models learned knowledge may decay as it moves away from its training interval.
 
 # Installing
 
