@@ -21,7 +21,7 @@ License: AGPLv3
 
 # TODO
 
-See issue #4 and #2 for ideas on where to go from here
+See issue [#4](https://github.com/wassname/rl-portfolio-management/issues/4) and [#2](https://github.com/wassname/rl-portfolio-management/issues/2) for ideas on where to go from here
 
 # Results
 
