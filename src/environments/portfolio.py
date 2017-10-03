@@ -1,12 +1,25 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from pprint import pprint
 
 import gym
 import gym.spaces
 
 from ..config import eps
 from ..data.utils import normalize, random_shift, scale_to_start
+
+
+def sharpe(returns, freq=30, rfr=0):
+    """Given a set of returns, calculates naive (rfr=0) sharpe (eq 28)."""
+    return (np.sqrt(freq) * np.mean(returns - rfr)) / np.std(returns - rfr)
+
+
+def max_drawdown(returns):
+    """Max drawdown."""
+    peak = returns.max()
+    trough = returns[returns.argmax():].min()
+    return (trough - peak) / trough
 
 
 class DataSrc(object):
@@ -109,9 +122,6 @@ class PortfolioSim(object):
         p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
 
         p1 = np.clip(p1, 0, np.inf)
-        # if p1 > 1e3:
-            # raise Exception("really? check this")
-        # print(dict(mu1=mu1,p1=p1,dw1=dw1,y1=y1))
 
         rho1 = p1 / p0 - 1  # rate of returns
         r1 = np.log((p1 + eps) / (p0 + eps))  # log rate of return
@@ -128,9 +138,11 @@ class PortfolioSim(object):
             "reward": reward,
             "log_return": r1,
             "portfolio_value": p1,
-            "returns": y1,
+            # "returns": y1,
+            "return": y1.mean(),
             "rate_of_return": rho1,
-            "weights": w1,
+            # "weights": w1,
+            "cash_bias": w1[0],
             "cost": mu1,
         }
         self.infos.append(info)
@@ -152,7 +164,7 @@ class PortfolioEnv(gym.Env):
     Based on [Jiang 2017](https://arxiv.org/abs/1706.10059)
     """
 
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': ['human','ansi']}
 
     def __init__(self,
                  df,
@@ -231,19 +243,13 @@ class PortfolioEnv(gym.Env):
         reward, info, done2 = self.sim._step(weights, y1)
         observation = observation[1:, :, :]  # remove cash columns
 
+        # calculate return for buy and hold a bit of each asset
+        info['market_value'] = np.cumprod([info["return"] for info in self.infos+[info]])[-1]
         # add dates
-        info['index'] = self.src.data.index[self.src.step]
+        info['date'] = self.src.data.index[self.src.step].timestamp()
         info['steps'] = self.src.step
-        info['cash_bias'] = info['weights'][0]
-        info['mean_market_returns'] = info['returns'].mean()
-        self.infos.append(info.copy())
 
-        # for keras-rl it only wants a single dict of numberic values
-        if 'weights' in info:
-            info['cash_bias'] = info['weights'][0]
-            del info['weights']
-        del info['returns']
-        del info['index']
+        self.infos.append(info)
 
         return observation, reward, done1 + done2, info
 
@@ -258,59 +264,19 @@ class PortfolioEnv(gym.Env):
     def _render(self, mode='human', close=False):
         if close:
             return
-        pass
-        # if mode == 'ansi':
-        #     info = self.sim.infos
-        #     df_info = pd.DataFrame(info)
-        #     df_returns = pd.DataFrame(
-        #         np.stack(df_info.returns.values),
-        #         columns=self.sim.asset_names,
-        #         index=df_info.index)
-        #     df_weights = pd.DataFrame(
-        #         np.stack(df_info.weights.values),
-        #         columns=self.sim.asset_names,
-        #         index=df_info.index)
-        #     print('Gain:\n', df_weights.iloc[-1] * (df_returns.iloc[-1] - 1))
-        # elif mode=='human':
-        #     self.plot()
+        if mode == 'ansi':
+            pprint(self.infos[-1])
+        elif mode == 'human':
+            self.plot()
 
     def plot(self):
+        # show a plot of portfolio vs mean market performance
+        df_info = pd.DataFrame(self.infos)
+        df_info.index = pd.to_datetime(df_info["date"], unit='s')
+        del df_info['date']
 
-        info = self.sim.infos
-        # add dates
-        for i in range(len(info)):
-            info[i]['index'] = self.src.data.index[:self.src.step][i]
+        mdd = max_drawdown(df_info.rate_of_return+1)
+        sharpe_ratio = sharpe(df_info.rate_of_return)
+        title='max_drawdown={: 2.2%} sharpe_ratio={: 2.4f}'.format(mdd,sharpe_ratio)
 
-        # make dataframes
-        df_info = pd.DataFrame(info)
-        df_info.index = df_info['index']
-        del df_info['index']
-
-        df_returns = pd.DataFrame(
-            np.stack(df_info.returns.values),
-            columns=self.sim.asset_names,
-            index=df_info.index)
-        df_weights = pd.DataFrame(
-            np.stack(df_info.weights.values),
-            columns=self.sim.asset_names,
-            index=df_info.index)
-        df_quantity = (df_returns * df_weights)
-        df_info = df_info.drop(['returns', 'weights'], axis=1)
-
-        # plots
-        # (df_returns-1).plot(title='returns')
-        # plt.show()
-
-        # df_info.portfolio_value.plot(title='portfolio_value', ylim=[0, 2])
-        # plt.show()
-        df_quantity.plot.area(title='portfolio value')
-        plt.show()
-
-        df_weights.plot.area(title='portfolio weights', ylim=[0, 1])
-        plt.show()
-
-        # (df_returns.iloc[-1]-1).plot('bar', title='change')
-        # plt.show()
-
-        # (df_quantity.iloc[-1]).plot('pie', title='step distribution')
-        # plt.show()
+        df_info[["portfolio_value", "market_value"]].plot(title=title)
