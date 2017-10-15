@@ -141,8 +141,9 @@ class PortfolioSim(object):
             # "returns": y1,
             "return": y1.mean(),
             "rate_of_return": rho1,
-            # "weights": w1,
-            "cash_bias": w1[0],
+            "weights_mean": w1.mean(),
+            "weights_std": w1.std(),
+            # "cash_bias": w1[0],
             "cost": mu1,
         }
         self.infos.append(info)
@@ -164,7 +165,7 @@ class PortfolioEnv(gym.Env):
     Based on [Jiang 2017](https://arxiv.org/abs/1706.10059)
     """
 
-    metadata = {'render.modes': ['human','ansi']}
+    metadata = {'render.modes': ['human', 'ansi']}
 
     def __init__(self,
                  df,
@@ -229,7 +230,7 @@ class PortfolioEnv(gym.Env):
         # normalise just in case
         action = np.clip(action, 0, 1)
 
-        weights = action # np.array([cash_bias] + list(action))  # [w0, w1...]
+        weights = action  # np.array([cash_bias] + list(action))  # [w0, w1...]
         weights /= (weights.sum() + eps)
         weights[0] += np.clip(1 - weights.sum(), 0, 1)  # so if weights are all zeros we normalise to [1,0...]
 
@@ -244,7 +245,7 @@ class PortfolioEnv(gym.Env):
         observation = observation[1:, :, :]  # remove cash columns
 
         # calculate return for buy and hold a bit of each asset
-        info['market_value'] = np.cumprod([info["return"] for info in self.infos+[info]])[-1]
+        info['market_value'] = np.cumprod([inf["return"] for inf in self.infos + [info]])[-1]
         # add dates
         info['date'] = self.src.data.index[self.src.step].timestamp()
         info['steps'] = self.src.step
@@ -275,8 +276,8 @@ class PortfolioEnv(gym.Env):
         df_info.index = pd.to_datetime(df_info["date"], unit='s')
         del df_info['date']
 
-        mdd = max_drawdown(df_info.rate_of_return+1)
+        mdd = max_drawdown(df_info.rate_of_return + 1)
         sharpe_ratio = sharpe(df_info.rate_of_return)
-        title='max_drawdown={: 2.2%} sharpe_ratio={: 2.4f}'.format(mdd,sharpe_ratio)
+        title = 'max_drawdown={: 2.2%} sharpe_ratio={: 2.4f}'.format(mdd, sharpe_ratio)
 
         df_info[["portfolio_value", "market_value"]].plot(title=title, fig=plt.gcf())
