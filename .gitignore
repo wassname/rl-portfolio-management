@@ -1,8 +1,9 @@
 secrets/secrets.json
-outputs
+outputs/
 .cache
 .trash
-models
+models/
+logs/
 
 # Created by https://www.gitignore.io/api/linux,python,windows
 

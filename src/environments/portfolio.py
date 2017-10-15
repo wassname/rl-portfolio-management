@@ -279,4 +279,4 @@ class PortfolioEnv(gym.Env):
         sharpe_ratio = sharpe(df_info.rate_of_return)
         title='max_drawdown={: 2.2%} sharpe_ratio={: 2.4f}'.format(mdd,sharpe_ratio)
 
-        df_info[["portfolio_value", "market_value"]].plot(title=title)
+        df_info[["portfolio_value", "market_value"]].plot(title=title, fig=plt.gcf())
