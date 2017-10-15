@@ -9,8 +9,8 @@ https://github.com/farizrahman4u/keras-contrib/archive/15133077af4d9c379c8219574
 h5py==2.7.0
 keras-rl==0.3.0
 keras-tqdm==2.0.1
-# if you get errors importing then you might have to install this via git clone, then pip -e . install (like in the tensorforce readme)
-git+https://github.com/reinforceio/tensorforce.git@f3d49572f11c03c73d2f2ad96e8c8725917f3e83#egg=tensorforce
+# use my branch with prioritised ppo, untill mergeed
+https://github.com/wassname/tensorforce/archive/merged_6b.zip
 # numbers
 tables==3.4.2
 seaborn==0.7.1
