@@ -213,11 +213,11 @@ class PortfolioEnv(gym.Env):
         )
         self._reset()
 
-    def _step(self, action):
+    def _step(self, action, cash_bias=0.0):
         """
         Step the env.
 
-        Actions should be portfolio [cash_bias, w0...]
+        Actions should be portfolio [w0...]
         - Where wn is a portfolio weight from 0 to 1. The first is cash_bias
         - cn is the portfolio conversion weights see PortioSim._step for description
         """
@@ -229,7 +229,7 @@ class PortfolioEnv(gym.Env):
         # normalise just in case
         action = np.clip(action, 0, 1)
 
-        weights = action  # [cash_bias, w0, w1...]
+        weights = action # np.array([cash_bias] + list(action))  # [w0, w1...]
         weights /= (weights.sum() + eps)
         weights[0] += np.clip(1 - weights.sum(), 0, 1)  # so if weights are all zeros we normalise to [1,0...]
 
