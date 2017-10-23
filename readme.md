@@ -1,5 +1,7 @@
 Attempting to replicate "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem" by [Jiang et. al. 2017](https://arxiv.org/abs/1706.10059) [1].
 
+tl;dr I managed to get 8% growth on training data, but it disapeared on test data. However, RL papers can be very difficult to replicate due to bugs, framework differences, and hyperparameter sensistivity.
+
 This paper trains an agent to choose a good portfolio of cryptocurrencies. It's reported that it can give 4-fold returns in 50 days and the paper seems to do all the right things so I wanted to see if I could acheive the same results.
 
 This repo includes an environment for portfolio management (with unit tests). Hopefully others will find this usefull as I am not aware of any other implementations (as of 2017-07-17).
@@ -8,7 +10,7 @@ The main differences from Jiang et. al. 2017 are:
 
 - The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
 - I have not used portfolio vector memory. Normally this would lead to it incurring large trading costs, but as I have disabled trading costs this shouldn't be a problem.
-- Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation.
+- Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation and PPO.
 - I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
 - instead of selecting 12 assets for each window I chose 8 assets that have existed for the longest time
 - My topology had an extra layer [see issue 3](https://github.com/wassname/rl-portfolio-management/issues/3)
@@ -29,7 +31,7 @@ I have not managed to overfit to the training data or generalise to the test dat
 
 - VPG model, training: 1.008 in 15 hours, 1.9 in 50 days
 - VPG model, test: 1.00 in 15 hours, 1.0 in 50 days
-- DDPG model, test
+- [DDPG model](https://github.com/wassname/rl-portfolio-management/blob/8c74f136765f621eb45d484553b9f778e9243a84/keras-ddpg.ipynb), test
 
 ![](docs/tensorforce-VPG-test.png)
 
