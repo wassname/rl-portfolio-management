@@ -43,14 +43,14 @@ This test period is directly after the training period and it looks like the use
 - `cd rl-portfolio-management`
 - `pip install -r requirements/requirements.txt`
 - `jupyter-notebook`
-    - Then open keras-ddpg.ipynb in jupyter
-    - Or try an alternative agent  with tensorforce-VPG.ipynb and train
+    - Then open tensorflow-VPG.ipynb in jupyter
+    - Or try an alternative agent  with tensorforce-PPO.ipynb and train
 
 # Details
 
 - enviroments/portfolio.py - contains an openai environment for porfolio trading
 - tensorforce-VPG.ipynb - notebook to try a policy gradient agent
-- keras-ddpg - notebook to try a Deep DPG agent
+- tensorforce-PPO - notebook to try a PPO agent
 - data/poloniex_30m.hdf - hdf file with cryptocurrency 30 minutes prices
 
 # Tests
