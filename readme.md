@@ -27,7 +27,7 @@ See issue [#4](https://github.com/wassname/rl-portfolio-management/issues/4) and
 
 # Results
 
-I have not managed to overfit to the training data or generalise to the test data. So far there have been poor results. I have not yet tried hyperparameter optimisation so it could be that parameter tweaking will allow the model to fit.
+I have managed to overfit to the training data with no trading costs but it could not generalise to the test data. So far there have been poor results. I have not yet tried hyperparameter optimisation so it could be that parameter tweaking will allow the model to fit, or I may have subtle bugs.
 
 - VPG model, training: 1.008 in 15 hours, 1.9 in 50 days
 - VPG model, test: 1.00 in 15 hours, 1.0 in 50 days
