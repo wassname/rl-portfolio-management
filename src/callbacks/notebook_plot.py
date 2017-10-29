@@ -1,0 +1,58 @@
+import os
+import numpy as np
+from matplotlib import pyplot as plt
+
+
+class LivePlotNotebook(object):
+    """
+    Live plot using `%matplotlib notebook` in jupyter
+
+    Usage:
+    liveplot = LivePlotNotebook(labels=['a','b'])
+    x = range(10)
+    ya = np.random.random((10))
+    yb = np.random.random((10))
+    liveplot.update(x, [ya,yb])
+    """
+
+    def __init__(self, log_dir=None, episode=0, labels=[], title=''):
+        # TODO check warn if note using right matplotlib backend
+        self.log_dir = log_dir
+        self.i = episode
+
+        fig, ax = plt.subplots(1, 1, figsize=(8, 4))
+
+        for i in range(len(labels)):
+            ax.plot([0] * 20, label=labels[i])
+
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.legend()
+        ax.set_xlabel('date')
+        ax.set_ylabel('return')
+        ax.grid()
+        ax.set_title(title)
+
+        self.ax = ax
+        self.fig = fig
+
+    def update(self, x, ys):
+        x = np.array(x)
+
+        for i in range(len(ys)):
+            # update price
+            line = self.ax.lines[i]
+            line.set_xdata(x)
+            line.set_ydata(ys[i])
+
+        # update limits
+        y = np.concatenate(ys)
+        y_extra = y.std() * 0.1
+        self.ax.set_xlim(x.min(), x.max())
+        self.ax.set_ylim(y.min() - y_extra, y.max() + y_extra)
+
+        if self.log_dir:
+            self.fig.savefig(os.path.join(
+                self.log_dir, '%i_liveplot.png' % self.i))
+        self.fig.canvas.draw()
+        self.i += 1
