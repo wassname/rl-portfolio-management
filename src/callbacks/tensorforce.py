@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import os
+import datetime
 
 from ..util import sharpe, MDD
 
@@ -32,9 +33,8 @@ class TensorBoardLogger(object):
         self.log_dir = log_dir
         self.writer = tf.summary.FileWriter(self.log_dir)
         self.episode = episode
-        print(
-            'TensorBoardLogger started. Run `tensorboard --logdir={}` to visualize'.
-            format(os.path.abspath(self.log_dir)))
+        print('TensorBoardLogger started. Run `tensorboard --logdir={}` to visualize'.format(
+            os.path.dirname(os.path.abspath(log_dir))))
 
         self.histograms = {}
         self.histogram_inputs = {}
@@ -89,7 +89,7 @@ class EpisodeFinished(object):
             self.sharpes.append(sharpe(df.rate_of_return))
         if r.episode % self.log_intv == 0:
             print(
-                "Finished episode {ep} after {ts} timesteps (reward: {reward: 2.4f} [{rewards_min: 2.4f}, {rewards_max: 2.4f}]) portfolio_value: {portfolio_value: 2.4f} [{portfolio_value_min: 2.4f}, {portfolio_value_max: 2.4f}] mdd={mdd: 2.2%} sharpe={sharpe: 2.2f}".
+                "Finished episode {ep} after {ts} timesteps (reward: {reward: 2.6f} [{rewards_min: 2.6f}, {rewards_max: 2.6f}]) portfolio_value: {portfolio_value: 2.4f} [{portfolio_value_min: 2.4f}, {portfolio_value_max: 2.4f}] mdd={mdd: 2.2%} sharpe={sharpe: 2.2f}".
                 format(
                     ep=r.episode,
                     ts=r.timestep,
@@ -107,22 +107,28 @@ class EpisodeFinished(object):
         return True
 
 
-class EpisodeFinishedTQDM(EpisodeFinished):
+class EpisodeFinishedTQDM(object):
     """Logger for tensorforce using tqdm_notebook for jupyter-notebook."""
 
     def __init__(self,
-                 episodes,
+                 steps,
                  log_intv,
                  session=None,
                  log_dir=None,
-                 episode=0):
+                 episode=0, mean_of=10,
+                 save_dir=None, save_every=10
+                 ):
         """
         log_intv - print the mean metrics every log_intv episodes
         """
-        super().__init__(log_intv=log_intv)
-        self.episodes = episodes
+        # super().__init__(log_intv=log_intv)
+        self.steps = steps
+        self.mean_of = mean_of
+        self.log_intv = log_intv
+        self.save_dir = save_dir
+        self.save_every = save_every
         self.progbar = tqdm_notebook(
-            desc='', total=episodes, leave=True, mininterval=5)
+            desc='', total=steps, unit='steps', leave=True, mininterval=3)
 
         # tensorboard
         if log_dir:
@@ -133,38 +139,69 @@ class EpisodeFinishedTQDM(EpisodeFinished):
             self.log_dir, session=session, episode=episode)
 
     def __call__(self, r):
-        super().__call__(r)
+        # super().__call__(r)
         oai_env = r.environment.gym.unwrapped
-        exploration = r.agent.exploration.get('action0', lambda x, y: 0)(
-            r.episode, np.sum(r.episode_lengths))
-        desc = "reward: {reward: 2.4f} [{rewards_min: 2.4f}, {rewards_max: 2.4f}], portfolio_value: {portfolio_value: 2.4f} [{portfolio_value_min: 2.4f}, {portfolio_value_max: 2.4f}] expl={exploration: 2.2%}".format(
-            reward=np.mean(r.episode_rewards[-1:]),
-            rewards_min=np.min(r.episode_rewards[-1:]),
-            rewards_max=np.max(r.episode_rewards[-1:]),
-            portfolio_value=np.mean(self.portfolio_values[-1:]),
-            portfolio_value_min=np.min(self.portfolio_values[-1:]),
-            portfolio_value_max=np.max(self.portfolio_values[-1:]),
-            exploration=exploration)
+        df_info = pd.DataFrame(oai_env.infos)
+        rate_of_return = df_info["rate_of_return"].values
+        weights = dict(zip(oai_env.src.asset_names, np.round(oai_env.sim.w0, 4).tolist()))
+        exploration = r.agent.exploration.get('action', lambda x, y: 0)(
+            r.episode, np.sum(r.episode_timesteps))
+
+        desc = "ep reward: {reward: 2.8f} [{rewards_min: 2.8f}, {rewards_max: 2.8f}], portfolio_value: {portfolio_value: 2.4f} mdd={mdd:2.2%} sharpe={sharpe:2.4f}, expl={exploration: 2.2%} eps={episode:} weights={weights:}".format(
+            reward=np.mean(df_info["reward"].mean()),
+            rewards_min=np.min(df_info["reward"].min()),
+            rewards_max=np.max(df_info["reward"].max()),
+            episode=r.episode,
+            portfolio_value=oai_env.sim.p0,
+            mdd=MDD(rate_of_return + 1),
+            sharpe=sharpe(rate_of_return),
+            exploration=exploration,
+            weights=weights)
         self.progbar.desc = desc
-        self.progbar.update(1)  # update
+        self.progbar.update(r.episode_timesteps[-1])
+
+        # print every now and again
+        if r.episode % self.log_intv == 0:
+            print(desc)
+            oai_env.render(mode='notebook')
 
         # log to tensorboard
         logs = dict(
-            episode_rewards=r.episode_rewards[-1],
-            episode_lengths=r.episode_lengths[-1],
+            # episode_rewards=r.episode_rewards[-1],
+            episode_timesteps=r.episode_timesteps[-1],
             episode_time=r.episode_times[-1],
-            portfolio_value=np.mean(self.portfolio_values[-1:]),
-            portfolio_value_min=np.min(self.portfolio_values[-1:]),
-            portfolio_value_max=np.max(self.portfolio_values[-1:]),
-            exploration=exploration)
-        df_info = pd.DataFrame(oai_env.infos)
+            portfolio_value=oai_env.sim.p0,
+            exploration=exploration,
+            sharpe=sharpe(rate_of_return),
+            mdd=MDD(rate_of_return + 1),
+        )
+
+        # logs info means
         ep_infos = df_info.mean().to_dict()
         logs.update(ep_infos)
+
+        # and some arrays
+        histograms = {}
+        # histograms = dict(
+        #     return_hist=df_info['market_return'].values,
+        #     rate_of_return_hist=rate_of_return,
+        #     portfolio_value_hist=df_info.portfolio_value.values,
+        #     market_value_hist=df_info.market_value.values,
+        #     last_weight_hist=oai_env.sim.w0,
+        # )
+        # # and each weight dist
+        # for i, w in enumerate(oai_env.sim.w0):
+        #     histograms[oai_env.src.asset_names[i] + '_hist'] = df_info['weight_' + oai_env.src.asset_names[i]]
+
         self.tensor_board_logger.log(
             logs=logs,
-            histograms=dict(
-                returns=df_info['return'].values,
-                portfolio_value=df_info.portfolio_value.values,
-                market_value=df_info.market_value.values, ),
+            histograms=histograms,
             episode=r.episode)
-        return True
+
+        # save sometimes
+        if self.save_dir and (r.episode % self.save_every == 0):
+            r.agent.save_model(self.save_dir)
+            print('saved to', self.save_dir)
+
+        # and halt if we are beyond out max steps
+        return r.timestep < self.steps
