@@ -1,7 +1,25 @@
 from src.data.utils import random_shift, normalize, scale_to_start
+from src.util import sharpe, MDD
 
 import pandas as pd
 import numpy as np
+
+
+def test_maxdrawdown():
+    assert MDD(np.array([0, 0, 0, 0, 1, 2, 3])) == 0
+    assert MDD(np.array([0, 0, 0, 0, 1, 2, 1])) == -1
+    assert MDD(np.array([0, 0, 0, 3, 1, 2, 1])) == -2
+    assert MDD(np.array([0, 0, 0, 3, 1, 2, 1, 1, 2])) == -2
+
+
+def test_sharpe():
+    x = np.random.normal(loc=1, scale=1, size=1000000)
+    np.testing.assert_almost_equal(sharpe(
+        x, freq=1), 1, decimal=2, err_msg='sharpe of normal dist with mean=1, std=1 should be ~1')
+
+    x = np.random.normal(loc=1 / np.sqrt(30), scale=1, size=1000000)
+    np.testing.assert_almost_equal(sharpe(
+        x, freq=30), 1, decimal=2, err_msg='sharpe of normal dist with mean=1/sqrt(30), std=1, at freq of 30 should be ~1')
 
 
 def test_random_shift():

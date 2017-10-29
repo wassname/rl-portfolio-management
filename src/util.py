@@ -1,8 +1,9 @@
 import numpy as np
+from .config import eps
 
-def sharpe(returns, freq=30, rfr=0):
+def sharpe(returns, freq=30, rfr=0.0):
     """Given a set of returns, calculates naive (rfr=0) sharpe (eq 28) """
-    return (np.sqrt(freq) * np.mean(returns - rfr)) / np.std(returns - rfr)
+    return (np.sqrt(freq) * np.mean(returns - rfr)) / (np.std(returns - rfr) + eps)
 
 
 def MDD(returns):

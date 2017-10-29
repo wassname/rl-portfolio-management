@@ -62,7 +62,7 @@ class DataSrc(object):
                         for asset in self.asset_names])
 
         self.step += 1
-        done = self.step >= self.steps
+        done = bool(self.step >= self.steps)
         return obs, done
 
     def reset(self):
@@ -129,7 +129,7 @@ class PortfolioSim(object):
         self.p0 = p1
 
         # if we run out of money, we're done
-        done = p1 == 0
+        done = bool(p1 == 0)
 
         # should only return single values, not list
         info = {
@@ -232,7 +232,7 @@ class PortfolioEnv(gym.Env):
 
         self.observation_space = gym.spaces.Box(
             0,
-            1,
+            2 if scale else 1,  # if scale=True observed price changes return could be large fractions
             obs_shape
         )
         self._reset()
@@ -248,12 +248,13 @@ class PortfolioEnv(gym.Env):
         logger.debug('action: %s', action)
 
         weights = np.clip(action, 0.0, 1.0)
+        weights /= weights.sum() + eps
 
         # Sanity checks
         np.testing.assert_almost_equal(
             action.shape,
             (len(self.sim.asset_names),),
-            err_msg='Action should contain %s floats, not %s'%(len(self.sim.asset_names), action.shape)
+            err_msg='Action should contain %s floats, not %s' % (len(self.sim.asset_names), action.shape)
         )
         assert ((action >= 0) * (action <= 1)
                 ).all(), 'all action values should be between 0 and 1. Not %s' % action
@@ -294,7 +295,7 @@ class PortfolioEnv(gym.Env):
         elif self.output_mode == 'mlp':
             observation = observation.flatten()
 
-        return observation, reward, done1 + done2, info
+        return observation, reward, done1 or done2, info
 
     def _reset(self):
         self.sim.reset()
@@ -343,6 +344,6 @@ class PortfolioEnv(gym.Env):
                 '/tmp', labels=self.sim.asset_names, title='price changes')
         ys = [df_info['price_' + name] for name in self.sim.asset_names]
         self._plot3.update(x, ys)
-        
+
         if close:
             self._plot = self._plot2 = self._plot3 = None
