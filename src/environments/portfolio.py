@@ -2,24 +2,18 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from pprint import pprint
+import logging
+import os
 
 import gym
 import gym.spaces
 
 from ..config import eps
 from ..data.utils import normalize, random_shift, scale_to_start
+from ..util import MDD as max_drawdown, sharpe, softmax
+from ..callbacks.notebook_plot import LivePlotNotebook
 
-
-def sharpe(returns, freq=30, rfr=0):
-    """Given a set of returns, calculates naive (rfr=0) sharpe (eq 28)."""
-    return (np.sqrt(freq) * np.mean(returns - rfr)) / np.std(returns - rfr)
-
-
-def max_drawdown(returns):
-    """Max drawdown."""
-    peak = returns.max()
-    trough = returns[returns.argmax():].min()
-    return (trough - peak) / trough
+logger = logging.getLogger(__name__)
 
 
 class DataSrc(object):
@@ -53,7 +47,8 @@ class DataSrc(object):
 
     def _step(self):
         # get observation matrix from dataframe
-        data_window = self.data.iloc[self.step:self.step + self.window_length].copy()
+        data_window = self.data.iloc[self.step:self.step +
+                                     self.window_length].copy()
 
         # (eq 18) prices are divided by open price
         # While the paper says open/close, it only makes sense with close/open
@@ -63,7 +58,8 @@ class DataSrc(object):
             data_window = data_window.drop('open', axis=1, level='Price')
 
         # convert to matrix (window, assets, prices)
-        obs = np.array([data_window[asset].as_matrix() for asset in self.asset_names])
+        obs = np.array([data_window[asset].as_matrix()
+                        for asset in self.asset_names])
 
         self.step += 1
         done = self.step >= self.steps
@@ -75,7 +71,8 @@ class DataSrc(object):
         # get data for this episode
         self.idx = np.random.randint(
             low=self.window_length, high=len(self._data.index) - self.steps)
-        data = self._data[self.idx - self.window_length:self.idx + self.steps + 1].copy()
+        data = self._data[self.idx -
+                          self.window_length:self.idx + self.steps + 1].copy()
 
         # augment data to prevent overfitting
         data = data.apply(lambda x: random_shift(x, self.augment))
@@ -121,31 +118,35 @@ class PortfolioSim(object):
 
         p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
 
-        p1 = np.clip(p1, 0, np.inf) # can't have negative holdings in this model (no shorts)
+        p1 = np.clip(p1, 0, np.inf)  # can't have negative holdings in this model (no shorts)
 
         rho1 = p1 / p0 - 1  # rate of returns
         r1 = np.log((p1 + eps) / (p0 + eps))  # (eq10) log rate of return
-        reward = r1 / self.steps  #  (eq22) immediate reward is log rate of return scaled by episode length
+        reward = r1 / self.steps  # (eq22) immediate reward is log rate of return scaled by episode length
 
-        # rememeber for next step
+        # remember for next step
         self.w0 = w1
         self.p0 = p1
 
         # if we run out of money, we're done
         done = p1 == 0
 
+        # should only return single values, not list
         info = {
             "reward": reward,
             "log_return": r1,
             "portfolio_value": p1,
-            # "returns": y1,
-            "return": y1.mean(),
+            "market_return": y1.mean(),
             "rate_of_return": rho1,
             "weights_mean": w1.mean(),
             "weights_std": w1.std(),
-            # "cash_bias": w1[0],
             "cost": mu1,
         }
+        # record weights and prices
+        for i in range(len(self.asset_names)):
+            info['weight_' + self.asset_names[i]] = w1[i]
+            info['price_' + self.asset_names[i]] = y1[i]
+
         self.infos.append(info)
         return reward, info, done
 
@@ -165,16 +166,17 @@ class PortfolioEnv(gym.Env):
     Based on [Jiang 2017](https://arxiv.org/abs/1706.10059)
     """
 
-    metadata = {'render.modes': ['human', 'ansi']}
+    metadata = {'render.modes': ['notebook', 'ansi']}
 
     def __init__(self,
                  df,
                  steps=256,
                  scale=True,
                  augment=0.00,
-                 trading_cost=0.0025, # 
-                 time_cost=0.00,   
-                 window_length=50, 
+                 trading_cost=0.0025,
+                 time_cost=0.00,
+                 window_length=50,
+                 output_mode='EIIE'
                  ):
         """
         An environment for financial portfolio management.
@@ -188,9 +190,15 @@ class PortfolioEnv(gym.Env):
             trading_cost - cost of trade as a fraction,  e.g. 0.0025 corresponding to max rate of 0.25% at Poloniex (2017)
             time_cost - cost of holding as a fraction
             window_length - how many past observations to return
+            output_mode: decides observation shape
+                - 'EIIE' for (assets, window, 3)
+                - 'atari' for (window, window, 3) (assets is padded)
+                - 'mlp' for (assets*window*3)
         """
-        self.src = DataSrc(df=df, steps=steps, scale=scale, augment=augment, window_length=window_length)
-
+        self.src = DataSrc(df=df, steps=steps, scale=scale,
+                           augment=augment, window_length=window_length)
+        self._plot = self._plot2 = self._plot3 = None
+        self.output_mode = output_mode
         self.sim = PortfolioSim(
             asset_names=self.src.asset_names,
             trading_cost=trading_cost,
@@ -200,21 +208,36 @@ class PortfolioEnv(gym.Env):
         # openai gym attributes
         # action will be the portfolio weights from 0 to 1 for each asset
         self.action_space = gym.spaces.Box(
-            0, 1, shape=len(self.src.asset_names))
+            0.0, 1.0, shape=len(self.src.asset_names))
 
         # get the observation space from the data min and max
-        self.observation_space = gym.spaces.Box(
-            0,
-            1,
-            (
-                len(self.src.asset_names) - 1,
+        if output_mode == 'EIIE':
+            obs_shape = (
+                len(self.src.asset_names) - 1,  # don't observe cash column
                 window_length,
                 len(self.src._data.columns.levels[1]) - 1
             )
+        elif output_mode == 'atari':
+            obs_shape = (
+                window_length,  # don't observe cash column
+                window_length,
+                len(self.src._data.columns.levels[1]) - 1
+            )
+        elif output_mode == 'mlp':
+            obs_shape = (len(self.src.asset_names) - 1) * window_length * \
+                (len(self.src._data.columns.levels[1]) - 1)
+        else:
+            raise Exception('Invalid value for output_mode: %s' %
+                            self.output_mode)
+
+        self.observation_space = gym.spaces.Box(
+            0,
+            1,
+            obs_shape
         )
         self._reset()
 
-    def _step(self, action, cash_bias=0.0):
+    def _step(self, action):
         """
         Step the env.
 
@@ -222,19 +245,18 @@ class PortfolioEnv(gym.Env):
         - Where wn is a portfolio weight from 0 to 1. The first is cash_bias
         - cn is the portfolio conversion weights see PortioSim._step for description
         """
+        logger.debug('action: %s', action)
+
+        weights = np.clip(action, 0.0, 1.0)
+
+        # Sanity checks
         np.testing.assert_almost_equal(
             action.shape,
-            (len(self.sim.asset_names),)
+            (len(self.sim.asset_names),),
+            err_msg='Action should contain %s floats, not %s'%(len(self.sim.asset_names), action.shape)
         )
-
-        # normalise just in case
-        action = np.clip(action, 0, 1)
-
-        weights = action  # np.array([cash_bias] + list(action))  # [w0, w1...]
-        weights /= (weights.sum() + eps)
-        weights[0] += np.clip(1 - weights.sum(), 0, 1)  # so if weights are all zeros we normalise to [1,0...]
-
-        assert ((action >= 0) * (action <= 1)).all(), 'all action values should be between 0 and 1. Not %s' % action
+        assert ((action >= 0) * (action <= 1)
+                ).all(), 'all action values should be between 0 and 1. Not %s' % action
         np.testing.assert_almost_equal(
             np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
 
@@ -242,15 +264,35 @@ class PortfolioEnv(gym.Env):
 
         y1 = observation[:, -1, 0]  # relative price vector (open/close)
         reward, info, done2 = self.sim._step(weights, y1)
-        observation = observation[1:, :, :]  # remove cash columns
+
+        # Bit of a HACK. We want it to know last steps porfolio weights
+        # but don't want to make dual inputs so I'll replace the oldest data
+        # with them
+        weight_insert_shape = (observation.shape[0], observation.shape[2])
+        observation[:, 0, :] = np.ones(
+            weight_insert_shape) * weights[:, np.newaxis]
+
+        # remove cash columns, they are just meaningless values
+        observation = observation[1:, :, :]
 
         # calculate return for buy and hold a bit of each asset
-        info['market_value'] = np.cumprod([inf["return"] for inf in self.infos + [info]])[-1]
+        info['market_value'] = np.cumprod(
+            [inf["market_return"] for inf in self.infos + [info]])[-1]
         # add dates
         info['date'] = self.src.data.index[self.src.step].timestamp()
         info['steps'] = self.src.step
 
         self.infos.append(info)
+
+        # reshape output
+        if self.output_mode == 'EIIE':
+            pass
+        elif self.output_mode == 'atari':
+            padding = observation.shape[1] - observation.shape[0]
+            observation = np.pad(observation, [[0, padding], [
+                                 0, 0], [0, 0]], mode='constant')
+        elif self.output_mode == 'mlp':
+            observation = observation.flatten()
 
         return observation, reward, done1 + done2, info
 
@@ -262,22 +304,45 @@ class PortfolioEnv(gym.Env):
         observation, reward, done, info = self.step(action)
         return observation
 
-    def _render(self, mode='human', close=False):
-        if close:
-            return
+    def _render(self, mode='notebook', close=False):
+        # if close:
+            # return
         if mode == 'ansi':
             pprint(self.infos[-1])
-        elif mode == 'human':
-            self.plot()
+        elif mode == 'notebook':
+            self.plot_notebook(close)
 
-    def plot(self):
+    def plot_notebook(self, close=False):
+        """Live plot using the jupyter notebook rendering of matplotlib."""
+
+        if close:
+            self._plot = self._plot2 = self._plot3 = None
+        if not self._plot:
+            self._plot = LivePlotNotebook(
+                '/tmp', title='performance', labels=["buy & hold", "portfolio_value"])
+
         # show a plot of portfolio vs mean market performance
         df_info = pd.DataFrame(self.infos)
         df_info.index = pd.to_datetime(df_info["date"], unit='s')
-        del df_info['date']
 
-        mdd = max_drawdown(df_info.rate_of_return + 1)
-        sharpe_ratio = sharpe(df_info.rate_of_return)
-        title = 'max_drawdown={: 2.2%} sharpe_ratio={: 2.4f}'.format(mdd, sharpe_ratio)
+        x = df_info.index
+        y1 = df_info["market_value"]
+        y2 = df_info["portfolio_value"]
+        self._plot.update(x, [y1, y2])
 
-        df_info[["portfolio_value", "market_value"]].plot(title=title, fig=plt.gcf())
+        # plot portfolio weights
+        if not self._plot2:
+            self._plot2 = LivePlotNotebook(
+                '/tmp', labels=self.sim.asset_names, title='weights')
+        ys = [df_info['weight_' + name] for name in self.sim.asset_names]
+        self._plot2.update(x, ys)
+
+        # plot portfolio prices
+        if not self._plot3:
+            self._plot3 = LivePlotNotebook(
+                '/tmp', labels=self.sim.asset_names, title='price changes')
+        ys = [df_info['price_' + name] for name in self.sim.asset_names]
+        self._plot3.update(x, ys)
+        
+        if close:
+            self._plot = self._plot2 = self._plot3 = None
