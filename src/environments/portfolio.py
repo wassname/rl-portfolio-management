@@ -172,9 +172,9 @@ class PortfolioEnv(gym.Env):
                  steps=256,
                  scale=True,
                  augment=0.00,
-                 trading_cost=0.0025,
-                 time_cost=0.00,
-                 window_length=50,
+                 trading_cost=0.0025, # 
+                 time_cost=0.00,   
+                 window_length=50, 
                  ):
         """
         An environment for financial portfolio management.
@@ -185,7 +185,7 @@ class PortfolioEnv(gym.Env):
             steps - steps in episode
             scale - scale data and each episode (except return)
             augment - fraction to randomly shift data by
-            trading_cost - cost of trade as a fraction
+            trading_cost - cost of trade as a fraction,  e.g. 0.0025 corresponding to max rate of 0.25% at Poloniex (2017)
             time_cost - cost of holding as a fraction
             window_length - how many past observations to return
         """
