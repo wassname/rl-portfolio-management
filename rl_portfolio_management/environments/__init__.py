@@ -7,20 +7,20 @@ df_train = pd.read_hdf('./data/poloniex_30m.hf', key='train')
 
 env_specs_args = [
     dict(id='CryptoPortfolioMLP-v0',
-         entry_point='src.environments.portfolio:PortfolioEnv',
+         entry_point='rl_portfolio_management.environments.portfolio:PortfolioEnv',
          kwargs=dict(
              output_mode='mlp',
              df=df_train
          )),
     dict(id='CryptoPortfolioEIIE-v0',
-         entry_point='src.environments.portfolio:PortfolioEnv',
+         entry_point='rl_portfolio_management.environments.portfolio:PortfolioEnv',
          kwargs=dict(
              output_mode='EIIE',
              df=df_train
          )
          ),
     dict(id='CryptoPortfolioAtari-v0',
-         entry_point='src.environments.portfolio:PortfolioEnv',
+         entry_point='rl_portfolio_management.environments.portfolio:PortfolioEnv',
          kwargs=dict(
              output_mode='atari',
              df=df_train

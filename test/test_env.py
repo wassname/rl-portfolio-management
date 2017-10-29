@@ -9,7 +9,7 @@ import numpy as np
 import gym
 from gym.envs.tests import test_envs
 
-from src.environments import PortfolioEnv, env_specs
+from rl_portfolio_management.environments import PortfolioEnv, env_specs
 
 
 @pytest.mark.parametrize("spec_id", env_specs)

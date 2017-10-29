@@ -3,7 +3,7 @@ import numpy as np
 
 import os
 os.sys.path.append('.')
-from src.callbacks.notebook_plot import LivePlotNotebook
+from rl_portfolio_management.callbacks.notebook_plot import LivePlotNotebook
 
 def test_live_plot_notebook():
     # Test

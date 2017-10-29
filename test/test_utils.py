@@ -1,5 +1,5 @@
-from src.data.utils import random_shift, normalize, scale_to_start
-from src.util import sharpe, MDD
+from rl_portfolio_management.data.utils import random_shift, normalize, scale_to_start
+from rl_portfolio_management.util import sharpe, MDD
 
 import pandas as pd
 import numpy as np

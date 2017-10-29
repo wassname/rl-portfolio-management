@@ -46,12 +46,21 @@ This test period is directly after the training period and it looks like the use
     - Then open tensorflow-VPG.ipynb in jupyter
     - Or try an alternative agent  with tensorforce-PPO.ipynb and train
 
-# Details
+# Files
 
 - enviroments/portfolio.py - contains an openai environment for porfolio trading
 - tensorforce-VPG.ipynb - notebook to try a policy gradient agent
 - tensorforce-PPO - notebook to try a PPO agent
 - data/poloniex_30m.hdf - hdf file with cryptocurrency 30 minutes prices
+
+# Using the environment
+
+There are three environments here to use them:
+```py
+
+```
+
+CryptoPortfolioMLP-v0
 
 # Tests
 
