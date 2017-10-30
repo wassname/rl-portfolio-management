@@ -14,25 +14,14 @@ License: AGPLv3
 
 [[1](https://arxiv.org/abs/1706.10059)] Jiang, Zhengyao, Dixing Xu, and Jinjun Liang. "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem." *arXiv preprint arXiv:1706.10059* (2017).
 
-## Differences in implementation
-
-
-The main differences from Jiang et. al. 2017 are:
-
-- The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
-- I have not used portfolio vector memory. For ease of implementation I made the information available by replacing the oldest timestep. Your model can slice it, or a Dense or CNN models can just be given the information.
-- Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation and PPO.
-- I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
-- instead of selecting 12 assets for each window I chose 5 assets that have existed for the longest time
-- My topology had an extra layer [see issue 3](https://github.com/wassname/rl-portfolio-management/issues/3)
 
 # Results
 
 I have managed to overfit to the training data with no trading costs but it could not generalise to the test data. So far there have been poor results. I have not yet tried hyperparameter optimisation so it could be that parameter tweaking will allow the model to fit, or I may have subtle bugs.
 
-- VPG model, training: 1.008 in 15 hours, 1.9 in 50 days
-- VPG model, test: 1.00 in 15 hours, 1.0 in 50 days
-- [DDPG model](https://github.com/wassname/rl-portfolio-management/blob/8c74f136765f621eb45d484553b9f778e9243a84/keras-ddpg.ipynb), test
+- VPG model,
+  - training: 190% portfolio growth in 50 days
+  - testing: 100% portfolio growth in 50 days
 
 ![](https://raw.githubusercontent.com/wassname/rl-portfolio-management/8c74f136765f621eb45d484553b9f778e9243a84/docs/tensorforce-VPG-test.png)
 
@@ -47,12 +36,6 @@ This test period is directly after the training period and it looks like the use
     - Then open tensorflow-VPG.ipynb in jupyter
     - Or try an alternative agent  with tensorforce-PPO.ipynb and train
 
-# Files
-
-- enviroments/portfolio.py - contains an openai environment for porfolio trading
-- tensorforce-VPG.ipynb - notebook to try a policy gradient agent
-- tensorforce-PPO - notebook to try a PPO agent
-- data/poloniex_30m.hdf - hdf file with cryptocurrency 30 minutes prices
 
 # Using the environment
 
@@ -122,6 +105,25 @@ We have partial test coverage of the environment, just run:
 
 - `python -m pytest`
 
+
+# Files
+
+- enviroments/portfolio.py - contains an openai environment for porfolio trading
+- tensorforce-VPG.ipynb - notebook to try a policy gradient agent
+- tensorforce-PPO - notebook to try a PPO agent
+- data/poloniex_30m.hdf - hdf file with cryptocurrency 30 minutes prices
+
+# Differences in implementation
+
+
+The main differences from Jiang et. al. 2017 are:
+
+- The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
+- I have not used portfolio vector memory. For ease of implementation I made the information available by replacing the oldest timestep. Your model can slice it, or a Dense or CNN models can just be given the information.
+- Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation and PPO.
+- I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
+- instead of selecting 12 assets for each window I chose 5 assets that have existed for the longest time
+- My topology had an extra layer [see issue 3](https://github.com/wassname/rl-portfolio-management/issues/3)
 
 # TODO
 
