@@ -48,8 +48,10 @@ class LivePlotNotebook(object):
         # update limits
         y = np.concatenate(ys)
         y_extra = y.std() * 0.1
-        self.ax.set_xlim(x.min(), x.max())
-        self.ax.set_ylim(y.min() - y_extra, y.max() + y_extra)
+        if x.min() != x.max():
+            self.ax.set_xlim(x.min(), x.max())
+        if (y.min() - y_extra) != (y.max() + y_extra):
+            self.ax.set_ylim(y.min() - y_extra, y.max() + y_extra)
 
         if self.log_dir:
             self.fig.savefig(os.path.join(

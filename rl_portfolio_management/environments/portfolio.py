@@ -318,18 +318,19 @@ class PortfolioEnv(gym.Env):
 
         if close:
             self._plot = self._plot2 = self._plot3 = None
-        if not self._plot:
-            self._plot = LivePlotNotebook(
-                '/tmp', title='performance', labels=["buy & hold", "portfolio_value"])
 
-        # show a plot of portfolio vs mean market performance
         df_info = pd.DataFrame(self.infos)
         df_info.index = pd.to_datetime(df_info["date"], unit='s')
 
+        # plot prices and performance
+        if not self._plot:
+            self._plot = LivePlotNotebook(
+                '/tmp', title='prices & performance', labels=self.sim.asset_names + ["Portfolio"])
         x = df_info.index
-        y1 = df_info["market_value"]
-        y2 = df_info["portfolio_value"]
-        self._plot.update(x, [y1, y2])
+        y_portfolio = df_info["portfolio_value"]
+        y_assets = [df_info['price_' + name].cumprod()
+                    for name in self.sim.asset_names]
+        self._plot.update(x, y_assets + [y_portfolio])
 
         # plot portfolio weights
         if not self._plot2:
@@ -337,13 +338,6 @@ class PortfolioEnv(gym.Env):
                 '/tmp', labels=self.sim.asset_names, title='weights')
         ys = [df_info['weight_' + name] for name in self.sim.asset_names]
         self._plot2.update(x, ys)
-
-        # plot portfolio prices
-        if not self._plot3:
-            self._plot3 = LivePlotNotebook(
-                '/tmp', labels=self.sim.asset_names, title='price changes')
-        ys = [df_info['price_' + name] for name in self.sim.asset_names]
-        self._plot3.update(x, ys)
 
         if close:
             self._plot = self._plot2 = self._plot3 = None
