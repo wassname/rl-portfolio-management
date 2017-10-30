@@ -33,7 +33,7 @@ This test period is directly after the training period and it looks like the use
 - `cd rl-portfolio-management`
 - `pip install -r requirements/requirements.txt`
 - `jupyter-notebook`
-    - Then open tensorflow-VPG.ipynb in jupyter
+    - Then open tensorforce-VPG.ipynb in jupyter
     - Or try an alternative agent  with tensorforce-PPO.ipynb and train
 
 
@@ -80,16 +80,23 @@ Let try it with a random agent and plot the results:
 
 
 ```py
-for _ in tqdm(range(50)):
+import numpy as np
 
-    # get random weights and normalize
-    action = env.action_space.sample()
+env.reset()
+for _ in range(150):
+    # change the portfolio by up to a 20th each step
+    old_portfolio = env.sim.w0
+    action = old_portfolio + np.random.normal(size=(4,))/20.0
+
+    # clip and normalize
+    action = np.clip(action, 0, 1)
     action /= action.sum()
 
     state, reward, done, info = env.step(action)
     if done:
         break
 
+# plot
 env.render('notebook', True)
 ```
 
