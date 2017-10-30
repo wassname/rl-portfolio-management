@@ -325,7 +325,7 @@ class PortfolioEnv(gym.Env):
         # plot prices and performance
         if not self._plot:
             self._plot = LivePlotNotebook(
-                '/tmp', title='prices & performance', labels=self.sim.asset_names + ["Portfolio"])
+                '/tmp', title='prices & performance', labels=self.sim.asset_names + ["Portfolio"], ylabel='value')
         x = df_info.index
         y_portfolio = df_info["portfolio_value"]
         y_assets = [df_info['price_' + name].cumprod()
@@ -335,7 +335,7 @@ class PortfolioEnv(gym.Env):
         # plot portfolio weights
         if not self._plot2:
             self._plot2 = LivePlotNotebook(
-                '/tmp', labels=self.sim.asset_names, title='weights')
+                '/tmp', labels=self.sim.asset_names, title='weights', ylabel='weight')
         ys = [df_info['weight_' + name] for name in self.sim.asset_names]
         self._plot2.update(x, ys)
 

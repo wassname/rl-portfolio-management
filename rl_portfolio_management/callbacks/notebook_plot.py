@@ -1,6 +1,8 @@
 import os
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib
+import logging
 
 
 class LivePlotNotebook(object):
@@ -15,8 +17,10 @@ class LivePlotNotebook(object):
     liveplot.update(x, [ya,yb])
     """
 
-    def __init__(self, log_dir=None, episode=0, labels=[], title=''):
-        # TODO check warn if note using right matplotlib backend
+    def __init__(self, log_dir=None, episode=0, labels=[], title='', ylabel='returns'):
+        if not matplotlib.rcParams['backend'] == 'nbAgg':
+            logging.warn("The liveplot callback only work when matplotlib is using the nbAgg backend. Execute 'matplotlib.use('nbAgg', force=True)'' or '%matplotlib notebook'")
+
         self.log_dir = log_dir
         self.i = episode
 
