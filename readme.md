@@ -91,10 +91,15 @@ env = PortfolioEnv(
   window_length=50,
   output_mode='mlp'
 )
+```
+
+Let try it with a random agent and plot the results:
 
 
-# Let run it with random actions then plot
+```py
 for _ in tqdm(range(50)):
+
+    # get random weights and normalize
     action = env.action_space.sample()
     action /= action.sum()
 
@@ -102,8 +107,11 @@ for _ in tqdm(range(50)):
     if done:
         break
 
-env.render('notebook')
+env.render('notebook', True)
 ```
+
+Unsuprisingly, the random agent doesn't perform well in portfolio management.
+
 ![](docs/img/price_performance.png)
 ![](docs/img/weights.png)
 
