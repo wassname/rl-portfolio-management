@@ -14,7 +14,6 @@ License: AGPLv3
 
 [[1](https://arxiv.org/abs/1706.10059)] Jiang, Zhengyao, Dixing Xu, and Jinjun Liang. "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem." *arXiv preprint arXiv:1706.10059* (2017).
 
-
 # Results
 
 I have managed to overfit to the training data with no trading costs but it could not generalise to the test data. So far there have been poor results. I have not yet tried hyperparameter optimisation so it could be that parameter tweaking will allow the model to fit, or I may have subtle bugs.
@@ -26,6 +25,8 @@ I have managed to overfit to the training data with no trading costs but it coul
 ![](https://raw.githubusercontent.com/wassname/rl-portfolio-management/8c74f136765f621eb45d484553b9f778e9243a84/docs/tensorforce-VPG-test.png)
 
 This test period is directly after the training period and it looks like the usefullness of the models learned knowledge may decay as it moves away from its training interval.
+
+There are other experiments stored as notebooks in past commits.
 
 # Installing
 
@@ -39,7 +40,8 @@ This test period is directly after the training period and it looks like the use
 
 # Using the environment
 
-There are three environments defined here to use them:
+The environments come with 47k steps of training data and 8k test steps. There are three output options which you can use as follows:
+
 ```py
 import gym
 import rl_portfolio_management.environments  # this registers them
@@ -50,7 +52,7 @@ print("shape =", env.reset().shape)
 # shape = (5, 50, 3)
 
 env = gym.envs.spec('CryptoPortfolioMLP-v0').make()
-print("CryptoPortfolioMLP has an state shape for a dense model")
+print("CryptoPortfolioMLP has an state shape for a dense/mulit-layer perceptron model")
 print("shape =", env.reset().shape)
 # shape = (750,)
 
@@ -64,7 +66,7 @@ Or define your own:
 ```py
 import rl_portfolio_management.environments import PortfolioEnv
 df_train = pd.read_hdf('./data/poloniex_30m.hf', key='train')
-env = PortfolioEnv(
+env_test = PortfolioEnv(
   df=df_train,
   steps=256,
   scale=True,
@@ -76,7 +78,7 @@ env = PortfolioEnv(
 )
 ```
 
-Let try it with a random agent and plot the results:
+Lets try it with a random agent and plot the results:
 
 
 ```py
@@ -84,7 +86,7 @@ import numpy as np
 
 env.reset()
 for _ in range(150):
-    # change the portfolio by up to a 20th each step
+    # change the portfolio by around a 20th each step
     old_portfolio = env.sim.w0
     action = old_portfolio + np.random.normal(size=(4,))/20.0
 
@@ -100,7 +102,7 @@ for _ in range(150):
 env.render('notebook', True)
 ```
 
-Unsuprisingly, the random agent doesn't perform well in portfolio management.
+Unsuprisingly, a random agent doesn't perform well in portfolio management. If it had chosen to bet on blue then black if could have outperformed any single asset, but hindsight is 20/20.
 
 ![](docs/img/price_performance.png)
 ![](docs/img/weights.png)
