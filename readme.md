@@ -34,7 +34,7 @@ I have managed to overfit to the training data with no trading costs but it coul
 - VPG model, test: 1.00 in 15 hours, 1.0 in 50 days
 - [DDPG model](https://github.com/wassname/rl-portfolio-management/blob/8c74f136765f621eb45d484553b9f778e9243a84/keras-ddpg.ipynb), test
 
-![](docs/tensorforce-VPG-test.png)
+![](https://raw.githubusercontent.com/wassname/rl-portfolio-management/8c74f136765f621eb45d484553b9f778e9243a84/docs/tensorforce-VPG-test.png)
 
 This test period is directly after the training period and it looks like the usefullness of the models learned knowledge may decay as it moves away from its training interval.
 
