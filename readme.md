@@ -92,7 +92,20 @@ env = PortfolioEnv(
   output_mode='mlp'
 )
 
+
+# Let run it with random actions then plot
+for _ in tqdm(range(50)):
+    action = env.action_space.sample()
+    action /= action.sum()
+
+    state, reward, done, info = env.step(action)
+    if done:
+        break
+
+env.render('notebook')
 ```
+![](docs/img/price_performance.png)
+![](docs/img/weights.png)
 
 
 # Tests
