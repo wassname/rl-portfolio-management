@@ -40,7 +40,9 @@ There are other experiments stored as notebooks in past commits.
 
 # Using the environment
 
-The environments come with 47k steps of training data and 8k test steps. There are three output options which you can use as follows:
+The environments come with 47k steps of training data and 8k test steps. Each step represents 30 minutes. Thanks to reddit user [ARRRBEEE](https://www.reddit.com/r/BitcoinMarkets/comments/694q0a/historical_pricing_data_for_poloniex_btceth_pairs) for sharing the data.
+
+There are three output options which you can use as follows:
 
 ```py
 import gym
@@ -52,12 +54,12 @@ print("shape =", env.reset().shape)
 # shape = (5, 50, 3)
 
 env = gym.envs.spec('CryptoPortfolioMLP-v0').make()
-print("CryptoPortfolioMLP has an state shape for a dense/mulit-layer perceptron model")
+print("CryptoPortfolioMLP has an flat shape for a dense/multi-layer perceptron model")
 print("shape =", env.reset().shape)
 # shape = (750,)
 
 env = gym.envs.spec('CryptoPortfolioAtari-v0').make()
-print("CryptoPortfolioAtari has an state shape for models that expect an image, such as ones tuned on Atari games")
+print("CryptoPortfolioAtari has been padded to represent an image so you can resue models tuned on Atari games")
 print("shape =", env.reset().shape)
 # shape = (50, 50, 3)
 ```
@@ -65,9 +67,9 @@ print("shape =", env.reset().shape)
 Or define your own:
 ```py
 import rl_portfolio_management.environments import PortfolioEnv
-df_train = pd.read_hdf('./data/poloniex_30m.hf', key='train')
+df_test = pd.read_hdf('./data/poloniex_30m.hf', key='test')
 env_test = PortfolioEnv(
-  df=df_train,
+  df=df_test,
   steps=256,
   scale=True,
   augment=0.00,
@@ -83,7 +85,10 @@ Lets try it with a random agent and plot the results:
 
 ```py
 import numpy as np
+import gym
+import rl_portfolio_management.environments  # this registers them
 
+env = gym.envs.spec('CryptoPortfolioMLP-v0').make()
 env.reset()
 for _ in range(150):
     # change the portfolio by around a 20th each step
