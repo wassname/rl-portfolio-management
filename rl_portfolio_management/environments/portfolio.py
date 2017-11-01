@@ -4,7 +4,8 @@ from matplotlib import pyplot as plt
 from pprint import pprint
 import logging
 import os
-
+import tempfile
+import time
 import gym
 import gym.spaces
 
@@ -266,7 +267,7 @@ class PortfolioEnv(gym.Env):
         y1 = observation[:, -1, 0]  # relative price vector (open/close)
         reward, info, done2 = self.sim._step(weights, y1)
 
-        # Bit of a HACK. We want it to know last steps porfolio weights
+        # Bit of a HACK. We want it to know last steps portfolio weights
         # but don't want to make dual inputs so I'll replace the oldest data
         # with them
         weight_insert_shape = (observation.shape[0], observation.shape[2])
@@ -324,8 +325,9 @@ class PortfolioEnv(gym.Env):
 
         # plot prices and performance
         if not self._plot:
+            self._plot_dir = os.path.join(tempfile.gettempdir(), 'notebook_plot_prices_' + str(time.time()))
             self._plot = LivePlotNotebook(
-                '/tmp', title='prices & performance', labels=self.sim.asset_names + ["Portfolio"], ylabel='value')
+                self._plot_dir, title='prices & performance', labels=self.sim.asset_names + ["Portfolio"], ylabel='value')
         x = df_info.index
         y_portfolio = df_info["portfolio_value"]
         y_assets = [df_info['price_' + name].cumprod()
@@ -334,8 +336,10 @@ class PortfolioEnv(gym.Env):
 
         # plot portfolio weights
         if not self._plot2:
+            self._plot_dir2 = os.path.join(tempfile.gettempdir(), 'notebook_plot_weights_' + str(time.time()))
+            os.makedirs(self._plot_dir2)
             self._plot2 = LivePlotNotebook(
-                '/tmp', labels=self.sim.asset_names, title='weights', ylabel='weight')
+                self._plot_dir2, labels=self.sim.asset_names, title='weights', ylabel='weight')
         ys = [df_info['weight_' + name] for name in self.sim.asset_names]
         self._plot2.update(x, ys)
 

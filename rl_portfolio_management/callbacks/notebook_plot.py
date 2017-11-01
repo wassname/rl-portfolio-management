@@ -22,18 +22,23 @@ class LivePlotNotebook(object):
             logging.warn("The liveplot callback only work when matplotlib is using the nbAgg backend. Execute 'matplotlib.use('nbAgg', force=True)'' or '%matplotlib notebook'")
 
         self.log_dir = log_dir
+        if log_dir:
+            try:
+                os.makedirs(log_dir)
+            except OSError:
+                pass
         self.i = episode
 
-        fig, ax = plt.subplots(1, 1, figsize=(8, 4))
+        fig, ax = plt.subplots(1, 1)
 
         for i in range(len(labels)):
-            ax.plot([0] * 20, label=labels[i])
+            ax.plot([0] * 20, label=labels[i], alpha=0.75, lw=2)
 
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.legend()
         ax.set_xlabel('date')
-        ax.set_ylabel('return')
+        ax.set_ylabel(ylabel)
         ax.grid()
         ax.set_title(title)
 
