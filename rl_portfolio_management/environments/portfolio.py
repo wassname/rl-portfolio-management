@@ -343,5 +343,14 @@ class PortfolioEnv(gym.Env):
         ys = [df_info['weight_' + name] for name in self.sim.asset_names]
         self._plot2.update(x, ys)
 
+        # plot portfolio costs
+        if not self._plot3:
+            self._plot_dir3 = os.path.join(tempfile.gettempdir(), 'notebook_plot_cost_' + str(time.time()))
+            os.makedirs(self._plot_dir3)
+            self._plot3 = LivePlotNotebook(
+                self._plot_dir3, labels=['cost'], title='costs', ylabel='cost')
+        ys = [df_info['cost'].cumsum()]
+        self._plot3.update(x, ys)
+
         if close:
             self._plot = self._plot2 = self._plot3 = None
