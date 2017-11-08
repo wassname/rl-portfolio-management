@@ -112,8 +112,10 @@ class PortfolioSim(object):
 
         dw1 = (y1 * w0) / (np.dot(y1, w0) + eps)  # (eq7) weights evolve into
 
+        # (eq16) cost to change portfolio
+        # (excluding change in cash to avoid double counting for transaction cost)
         mu1 = self.cost * (
-            np.abs(dw1 - w1)).sum()  # (eq16) cost to change portfolio
+            np.abs(dw1[1:] - w1[1:])).sum()
 
         p1 = p0 * (1 - mu1) * np.dot(y1, w0)  # (eq11) final portfolio value
 
