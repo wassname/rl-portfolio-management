@@ -130,3 +130,18 @@ def test_invalid_actions(spec_id):
             pass
         else:
             raise Exception('Expected error for invalid action %s' % action)
+
+@pytest.mark.parametrize("spec_id", env_specs)
+def test_costs(spec_id):
+    """Test that simple transaction have the cost we expect."""
+    env = gym.envs.spec(spec_id).make()
+    np.random.seed(0)
+    env.seed(0)
+
+    env.reset()
+    obs, reward, done, info = env.step(np.array([1, 0, 0, 0]))
+    obs, reward, done, info = env.step(np.array([0, 1, 0, 0]))
+    np.testing.assert_almost_equal(info['cost'], env.sim.cost, err_msg='trading 100% cash for asset1 should cost 1*trading_cost')
+
+    obs, reward, done, info = env.step(np.array([0, 0, 1, 0]))
+    np.testing.assert_almost_equal(info['cost'], env.sim.cost * 2, err_msg='trading 100% asset1 for asset2 should cost 2*trading_cost')
