@@ -23,7 +23,6 @@ def test_gym_env(spec_id):
 def test_env_outputs(spec_id):
     """Check outputs."""
     env = gym.envs.spec(spec_id).make()
-    np.random.seed(0)
     env.seed(0)
 
     action = env.action_space.sample()
@@ -48,7 +47,6 @@ def test_env_outputs(spec_id):
 def test_portfolio_env_random_agent(spec_id):
     """Test random actions for 20 steps."""
     env = gym.envs.spec(spec_id).make()
-    np.random.seed(0)
     env.seed(0)
 
     obs = env.reset()
@@ -73,7 +71,6 @@ def test_portfolio_env_random_agent(spec_id):
 def test_portfolio_env_hold(spec_id):
     """Test that holding cash gives stable value."""
     env = gym.envs.spec(spec_id).make()
-    np.random.seed(0)
     env.seed(0)
     env.reset()
     for _ in range(5):
@@ -90,12 +87,12 @@ def test_scaled():
     """Test env with scaled and not scaled option."""
     df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
 
-    np.random.seed(0)
     env1 = PortfolioEnv(df=df, scale=True)
+    env1.seed(0)
     obs1 = env1.reset()
 
-    np.random.seed(0)
     env0 = PortfolioEnv(df=df, scale=False)
+    env0.seed(0)
     obs0 = env0.reset()
 
     assert obs0 != obs1
@@ -105,7 +102,6 @@ def test_scaled():
 def test_invalid_actions(spec_id):
     """Test that holding cash gives stable value."""
     env = gym.envs.spec(spec_id).make()
-    np.random.seed(0)
     env.seed(0)
     env.reset()
 
@@ -136,7 +132,6 @@ def test_invalid_actions(spec_id):
 def test_costs(spec_id):
     """Test that simple transaction have the cost we expect."""
     env = gym.envs.spec(spec_id).make()
-    np.random.seed(0)
     env.seed(0)
 
     env.reset()
