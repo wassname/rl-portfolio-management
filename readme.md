@@ -135,20 +135,18 @@ We have partial test coverage of the environment, just run:
 # Files
 
 - enviroments/portfolio.py - contains an openai environment for porfolio trading
-- tensorforce-VPG.ipynb - notebook to try a policy gradient agent
-- tensorforce-PPO - notebook to try a PPO agent
-- data/poloniex_30m.hdf - hdf file with cryptocurrency 30 minutes prices
+- tensorforce-PPO-IEET.ipynb - notebook to try a policy gradient agent
 
 # Differences in implementation
 
 The main differences from Jiang et. al. 2017 are:
 
 - The first step in a deep learning project should be to make sure the model can overfit, this provides a sanity check. So I am first trying to acheive good results with no trading costs.
-- I have not used portfolio vector memory. For ease of implementation I made the information available by replacing the oldest timestep. Your model can slice it, or a Dense or CNN models can just be given the information.
+- I have not used portfolio vector memory. For ease of implementation I made the information available by using the last weights.
 - Instead of DPG ([deterministic policy gradient](http://jmlr.org/proceedings/papers/v32/silver14.pdf)) I tried and DDPG ([deep deterministic policy gradient]( http://arxiv.org/pdf/1509.02971v2.pdf)) and VPG (vanilla policy gradient) with generalized advantage estimation and PPO.
 - I tried to replicate the best performing CNN model from the paper and haven't attempted the LSTM or RNN models.
-- instead of selecting 12 assets for each window I chose 5 assets that have existed for the longest time
-- My topology had an extra layer [see issue 3](https://github.com/wassname/rl-portfolio-management/issues/3)
+- instead of selecting 12 assets for each window I chose 3 assets that have existed for the longest time
+- ~~My topology had an extra layer [see issue 3](https://github.com/wassname/rl-portfolio-management/issues/3)~~ fixed
 
 # TODO
 
