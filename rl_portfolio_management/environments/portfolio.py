@@ -38,13 +38,13 @@ class DataSrc(object):
         self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
 
-        df = df.copy()
 
         # get rid of NaN's
+        df = df.copy()
         df.replace(np.nan, 0, inplace=True)
         df = df.fillna(method="pad")
 
-        self._data = df.copy()
+        self._data = df
         self.asset_names = self._data.columns.levels[0].tolist()
 
         self.price_columns = ['close', 'high', 'low', 'open']
@@ -54,7 +54,7 @@ class DataSrc(object):
         if scale_extra_cols:
             self.stats = dict()
             for column in self.non_price_columns:
-                x = df.xs(key=column, axis=1, level='Price').as_matrix()[:, 1:]  # [1:] to ignore cash columns
+                x = df.xs(key=column, axis=1, level='Price').as_matrix()[:, :]
                 self.stats[column] = dict(mean=x.mean(), std=x.std())
 
         self.reset()
@@ -67,7 +67,6 @@ class DataSrc(object):
         # (eq 18) prices are divided by open price
         # While the paper says open/close, it only makes sense with close/open
         if self.scale:
-
             # scale prices by dividing price columns by the last open price
             open_price = data_window.xs('open', axis=1, level='Price')
             last_open_price = open_price.iloc[-1]
@@ -80,7 +79,7 @@ class DataSrc(object):
                 for column, stat in self.stats.items():
                     x = data_window.loc[:, (pair, column)]
                     # normalize by mean and std, then clip to 10 standard deviations
-                    x = (x - stat["mean"]) / (stat["std"] + 1e-5)
+                    x = (x - stat["mean"]) / (stat["std"] + 1e-10)
                     x = np.clip(x, stat["mean"] - stat["std"] * 10, stat["mean"] + stat["std"] * 10)
                     data_window.loc[:, (pair, column)] = x
 
@@ -183,7 +182,7 @@ class PortfolioSim(object):
 
     def reset(self):
         self.infos = []
-        self.w0 = np.array([1.0] + [0.0] * (len(self.asset_names) - 1))
+        self.w0 = np.array([1.0] + [0.0] * len(self.asset_names))
         self.p0 = 1.0
 
 
@@ -242,26 +241,26 @@ class PortfolioEnv(gym.Env):
         self.log_dir = log_dir
 
         # openai gym attributes
-        # action will be the portfolio weights from 0 to 1 for each asset
+        # action will be the portfolio weights [cash_bias,w1,w2...] where wn are [0, 1] for each asset
         nb_assets = len(self.src.asset_names)
         self.action_space = gym.spaces.Box(
-            0.0, 1.0, shape=nb_assets)
+            0.0, 1.0, shape=nb_assets + 1)
 
         # get the history space from the data min and max
         if output_mode == 'EIIE':
             obs_shape = (
-                nb_assets - 1,  # don't observe cash column
+                nb_assets,
                 window_length,
                 len(self.src._data.columns.levels[1]) - 1
             )
         elif output_mode == 'atari':
             obs_shape = (
-                window_length,  # don't observe cash column
+                window_length,
                 window_length,
                 len(self.src._data.columns.levels[1]) - 1
             )
         elif output_mode == 'mlp':
-            obs_shape = (nb_assets - 1) * window_length * \
+            obs_shape = (nb_assets) * window_length * \
                 (len(self.src._data.columns.levels[1]) - 1)
         else:
             raise Exception('Invalid value for output_mode: %s' %
@@ -269,8 +268,8 @@ class PortfolioEnv(gym.Env):
 
         self.observation_space = gym.spaces.Dict({
             'history': gym.spaces.Box(
-                0,
-                2 if scale else 1,  # if scale=True observed price changes return could be large fractions
+                -10,
+                20 if scale else 1,  # if scale=True observed price changes return could be large fractions
                 obs_shape
             ),
             'weights': self.action_space
@@ -282,7 +281,7 @@ class PortfolioEnv(gym.Env):
         Step the env.
 
         Actions should be portfolio [w0...]
-        - Where wn is a portfolio weight from 0 to 1. The first is cash_bias
+        - Where wn is a portfolio weight between 0 and 1. The first (w0) is cash_bias
         - cn is the portfolio conversion weights see PortioSim._step for description
         """
         logger.debug('action: %s', action)
@@ -291,23 +290,15 @@ class PortfolioEnv(gym.Env):
         weights /= weights.sum() + eps
 
         # Sanity checks
-        np.testing.assert_almost_equal(
-            action.shape,
-            (len(self.sim.asset_names),),
-            err_msg='Action should contain %s floats, not %s' % (len(self.sim.asset_names), action.shape)
-        )
-        assert ((action >= 0) * (action <= 1)
-                ).all(), 'all action values should be between 0 and 1. Not %s' % action
+        assert self.action_space.contains(action), 'action should be within %r but is %r' % (self.action_space, action)
         np.testing.assert_almost_equal(
             np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
 
         history, done1 = self.src._step()
 
         y1 = history[:, -1, 0]  # relative price vector (open/close)
+        y1 = np.concatenate([[1.0], y1])  # add cash price
         reward, info, done2 = self.sim._step(weights, y1)
-
-        # remove cash columns, they are just meaningless values
-        history = history[1:, :, :]
 
         # calculate return for buy and hold a bit of each asset
         info['market_value'] = np.cumprod(
