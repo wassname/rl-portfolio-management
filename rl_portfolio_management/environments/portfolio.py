@@ -47,7 +47,7 @@ class DataSrc(object):
         self.reset()
 
     def _step(self):
-        # get observation matrix from dataframe
+        # get history matrix from dataframe
         data_window = self.data.iloc[self.step:self.step +
                                      self.window_length].copy()
 
@@ -58,13 +58,15 @@ class DataSrc(object):
             data_window = data_window.divide(open.iloc[-1], level='Pair')
             data_window = data_window.drop('open', axis=1, level='Price')
 
+            # TODO I want to scale price columns seperate from extra cols such as volume
+
         # convert to matrix (window, assets, prices)
-        obs = np.array([data_window[asset].as_matrix()
+        history = np.array([data_window[asset].as_matrix()
                         for asset in self.asset_names])
 
         self.step += 1
         done = bool(self.step >= self.steps)
-        return obs, done
+        return history, done
 
     def reset(self):
         self.step = 0
@@ -179,7 +181,8 @@ class PortfolioEnv(gym.Env):
                  trading_cost=0.0025,
                  time_cost=0.00,
                  window_length=50,
-                 output_mode='EIIE'
+                 output_mode='EIIE',
+                 log_dir=None,
                  ):
         """
         An environment for financial portfolio management.
@@ -192,11 +195,12 @@ class PortfolioEnv(gym.Env):
             augment - fraction to randomly shift data by
             trading_cost - cost of trade as a fraction,  e.g. 0.0025 corresponding to max rate of 0.25% at Poloniex (2017)
             time_cost - cost of holding as a fraction
-            window_length - how many past observations to return
-            output_mode: decides observation shape
+            window_length - how many past observations["history"] to return
+            output_mode: decides observation["history"] shape
                 - 'EIIE' for (assets, window, 3)
                 - 'atari' for (window, window, 3) (assets is padded)
                 - 'mlp' for (assets*window*3)
+            log_dir: directory to save plots to
         """
         self.src = DataSrc(df=df, steps=steps, scale=scale,
                            augment=augment, window_length=window_length)
@@ -207,16 +211,18 @@ class PortfolioEnv(gym.Env):
             trading_cost=trading_cost,
             time_cost=time_cost,
             steps=steps)
+        self.log_dir = log_dir
 
         # openai gym attributes
         # action will be the portfolio weights from 0 to 1 for each asset
+        nb_assets = len(self.src.asset_names)
         self.action_space = gym.spaces.Box(
-            0.0, 1.0, shape=len(self.src.asset_names))
+            0.0, 1.0, shape=nb_assets)
 
-        # get the observation space from the data min and max
+        # get the history space from the data min and max
         if output_mode == 'EIIE':
             obs_shape = (
-                len(self.src.asset_names) - 1,  # don't observe cash column
+                nb_assets - 1,  # don't observe cash column
                 window_length,
                 len(self.src._data.columns.levels[1]) - 1
             )
@@ -227,17 +233,20 @@ class PortfolioEnv(gym.Env):
                 len(self.src._data.columns.levels[1]) - 1
             )
         elif output_mode == 'mlp':
-            obs_shape = (len(self.src.asset_names) - 1) * window_length * \
+            obs_shape = (nb_assets - 1) * window_length * \
                 (len(self.src._data.columns.levels[1]) - 1)
         else:
             raise Exception('Invalid value for output_mode: %s' %
                             self.output_mode)
 
-        self.observation_space = gym.spaces.Box(
-            0,
-            2 if scale else 1,  # if scale=True observed price changes return could be large fractions
-            obs_shape
-        )
+        self.observation_space = gym.spaces.Dict({
+            'history': gym.spaces.Box(
+                0,
+                2 if scale else 1,  # if scale=True observed price changes return could be large fractions
+                obs_shape
+            ),
+            'weights': self.action_space
+        })
         self._reset()
 
     def _step(self, action):
@@ -264,20 +273,13 @@ class PortfolioEnv(gym.Env):
         np.testing.assert_almost_equal(
             np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
 
-        observation, done1 = self.src._step()
+        history, done1 = self.src._step()
 
-        y1 = observation[:, -1, 0]  # relative price vector (open/close)
+        y1 = history[:, -1, 0]  # relative price vector (open/close)
         reward, info, done2 = self.sim._step(weights, y1)
 
-        # Bit of a HACK. We want it to know last steps portfolio weights
-        # but don't want to make dual inputs so I'll replace the oldest data
-        # with them
-        weight_insert_shape = (observation.shape[0], observation.shape[2])
-        observation[:, 0, :] = np.ones(
-            weight_insert_shape) * weights[:, np.newaxis]
-
         # remove cash columns, they are just meaningless values
-        observation = observation[1:, :, :]
+        history = history[1:, :, :]
 
         # calculate return for buy and hold a bit of each asset
         info['market_value'] = np.cumprod(
@@ -288,17 +290,17 @@ class PortfolioEnv(gym.Env):
 
         self.infos.append(info)
 
-        # reshape output
+        # reshape history according to output mode
         if self.output_mode == 'EIIE':
             pass
         elif self.output_mode == 'atari':
-            padding = observation.shape[1] - observation.shape[0]
-            observation = np.pad(observation, [[0, padding], [
+            padding = history.shape[1] - history.shape[0]
+            history = np.pad(history, [[0, padding], [
                                  0, 0], [0, 0]], mode='constant')
         elif self.output_mode == 'mlp':
-            observation = observation.flatten()
+            history = history.flatten()
 
-        return observation, reward, done1 or done2, info
+        return {'history': history, 'weights': weights}, reward, done1 or done2, info
 
     def _reset(self):
         self.sim.reset()
@@ -307,6 +309,10 @@ class PortfolioEnv(gym.Env):
         action = self.sim.w0
         observation, reward, done, info = self.step(action)
         return observation
+
+    def _seed(self, seed):
+        np.random.seed(seed)
+        return [seed]
 
     def _render(self, mode='notebook', close=False):
         # if close:
@@ -321,15 +327,16 @@ class PortfolioEnv(gym.Env):
 
         if close:
             self._plot = self._plot2 = self._plot3 = None
+            return
 
         df_info = pd.DataFrame(self.infos)
         df_info.index = pd.to_datetime(df_info["date"], unit='s')
 
         # plot prices and performance
         if not self._plot:
-            self._plot_dir = os.path.join(tempfile.gettempdir(), 'notebook_plot_prices_' + str(time.time()))
+            self._plot_dir = os.path.join(self.log_dir, 'notebook_plot_prices_' + str(time.time())) if self.log_dir else None
             self._plot = LivePlotNotebook(
-                self._plot_dir, title='prices & performance', labels=self.sim.asset_names + ["Portfolio"], ylabel='value')
+                log_dir=self._plot_dir, title='prices & performance', labels=self.sim.asset_names + ["Portfolio"], ylabel='value')
         x = df_info.index
         y_portfolio = df_info["portfolio_value"]
         y_assets = [df_info['price_' + name].cumprod()
@@ -338,19 +345,19 @@ class PortfolioEnv(gym.Env):
 
         # plot portfolio weights
         if not self._plot2:
-            self._plot_dir2 = os.path.join(tempfile.gettempdir(), 'notebook_plot_weights_' + str(time.time()))
+            self._plot_dir2 = os.path.join(self.log_dir, 'notebook_plot_weights_' + str(time.time())) if self.log_dir else None
             os.makedirs(self._plot_dir2)
             self._plot2 = LivePlotNotebook(
-                self._plot_dir2, labels=self.sim.asset_names, title='weights', ylabel='weight')
+                log_dir=self._plot_dir2, labels=self.sim.asset_names, title='weights', ylabel='weight')
         ys = [df_info['weight_' + name] for name in self.sim.asset_names]
         self._plot2.update(x, ys)
 
         # plot portfolio costs
         if not self._plot3:
-            self._plot_dir3 = os.path.join(tempfile.gettempdir(), 'notebook_plot_cost_' + str(time.time()))
+            self._plot_dir3 = os.path.join(self.log_dir, 'notebook_plot_cost_' + str(time.time())) if self.log_dir else None
             os.makedirs(self._plot_dir3)
             self._plot3 = LivePlotNotebook(
-                self._plot_dir3, labels=['cost'], title='costs', ylabel='cost')
+                log_dir=self._plot_dir3, labels=['cost'], title='costs', ylabel='cost')
         ys = [df_info['cost'].cumsum()]
         self._plot3.update(x, ys)
 

@@ -40,7 +40,10 @@ There are other experiments stored as notebooks in past commits.
 
 # Using the environment
 
-The environments come with 47k steps of training data and 8k test steps. Each step represents 30 minutes. Thanks to reddit user [ARRRBEEE](https://www.reddit.com/r/BitcoinMarkets/comments/694q0a/historical_pricing_data_for_poloniex_btceth_pairs) for sharing the data.
+These environments are dervied from the OpenAI environment class which you can learn about in their [documentation](https://gym.openai.com/docs/).
+
+
+These environments come with 47k steps of training data and 8k test steps. Each step represents 30 minutes. Thanks to reddit user [ARRRBEEE](https://www.reddit.com/r/BitcoinMarkets/comments/694q0a/historical_pricing_data_for_poloniex_btceth_pairs) for sharing the data.
 
 There are three output options which you can use as follows:
 
@@ -49,18 +52,21 @@ import gym
 import rl_portfolio_management.environments  # this registers them
 
 env = gym.envs.spec('CryptoPortfolioEIIE-v0').make()
-print("CryptoPortfolioEIIE has an state shape suitable for an EIIE model (see https://arxiv.org/abs/1706.10059)")
-print("shape =", env.reset().shape)
+print("CryptoPortfolioEIIE has an history shape suitable for an EIIE model (see https://arxiv.org/abs/1706.10059)")
+observation = env.reset()
+print("shape =", observation["history"].shape)
 # shape = (5, 50, 3)
 
 env = gym.envs.spec('CryptoPortfolioMLP-v0').make()
-print("CryptoPortfolioMLP has an flat shape for a dense/multi-layer perceptron model")
-print("shape =", env.reset().shape)
+print("CryptoPortfolioMLP history has an flat shape for a dense/multi-layer perceptron model")
+observation = env.reset()
+print("shape =", observation["history"].shape)
 # shape = (750,)
 
 env = gym.envs.spec('CryptoPortfolioAtari-v0').make()
-print("CryptoPortfolioAtari has been padded to represent an image so you can resue models tuned on Atari games")
-print("shape =", env.reset().shape)
+print("CryptoPortfolioAtari history has been padded to represent an image so you can reuse models tuned on Atari games")
+observation = env.reset()
+print("shape =", observation["history"].shape)
 # shape = (50, 50, 3)
 ```
 
@@ -89,17 +95,22 @@ import gym
 import rl_portfolio_management.environments  # this registers them
 
 env = gym.envs.spec('CryptoPortfolioMLP-v0').make()
-env.reset()
-for _ in range(150):
-    # change the portfolio by around a 20th each step
-    old_portfolio = env.sim.w0
-    action = old_portfolio + np.random.normal(size=(4,))/20.0
+steps = 150
+state = env.reset()
+for _ in range(steps):
+    # The observation contains price history and portfolio weights
+    old_portfolio_weights = state["weights"]
 
-    # clip and normalize
+    # the action is an array with the new portfolio weights
+    # for out action, let's change the weights by around a 20th each step
+    action = old_portfolio_weights + np.random.normal(loc=0, scale=1/20., size=(4,))
+
+    # clip and normalize since the portfolio weights should sum to one
     action = np.clip(action, 0, 1)
     action /= action.sum()
 
-    state, reward, done, info = env.step(action)
+    observation, reward, done, info = env.step(action)
+
     if done:
         break
 
@@ -111,6 +122,7 @@ Unsuprisingly, a random agent doesn't perform well in portfolio management. If i
 
 ![](docs/img/price_performance.png)
 ![](docs/img/weights.png)
+
 
 
 # Tests
@@ -128,7 +140,6 @@ We have partial test coverage of the environment, just run:
 - data/poloniex_30m.hdf - hdf file with cryptocurrency 30 minutes prices
 
 # Differences in implementation
-
 
 The main differences from Jiang et. al. 2017 are:
 

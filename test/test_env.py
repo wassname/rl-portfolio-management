@@ -32,7 +32,8 @@ def test_env_outputs(spec_id):
     obs1, reward, done, info = env.step(action)
     obs2 = env.reset()
 
-    assert obs1.shape == obs2.shape, 'rest and step should output same shaped observations'
+    assert obs1["history"].shape == obs2["history"].shape, 'rest and step should output same shaped observations'
+    assert obs1["weights"].shape == obs2["weights"].shape, 'rest and step should output same shaped observations'
     assert env.observation_space.contains(
         obs1), 'state should be within observation space'
     assert np.isfinite(reward), 'reward should be finite'
