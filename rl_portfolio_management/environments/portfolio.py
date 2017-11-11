@@ -20,19 +20,22 @@ logger = logging.getLogger(__name__)
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, scale=True, augment=0.00, window_length=50):
+    def __init__(self, df, steps=252, scale=True, scale_extra_cols=True, augment=0.00, window_length=50):
         """
         DataSrc.
 
         df - csv for data frame index of timestamps
-             and multi-index columns levels=[['LTCBTC'],...],['open','low','high','close']]
+             and multi-index columns levels=[['LTCBTC'],...],['open','low','high','close',...]]
+             an example is included as an hdf file in this repository
         steps - total steps in episode
         scale - scale the data for each episode
+        scale_extra_cols - scale extra columns by global mean and std
         augment - fraction to augment the data by
         """
         self.steps = steps + 1
         self.augment = augment
         self.scale = scale
+        self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
 
         df = df.copy()
@@ -44,6 +47,16 @@ class DataSrc(object):
         self._data = df.copy()
         self.asset_names = self._data.columns.levels[0].tolist()
 
+        self.price_columns = ['close', 'high', 'low', 'open']
+        self.non_price_columns = set(df.columns.levels[1]) - set(self.price_columns)
+
+        # Stats to let us normalize non price columns
+        if scale_extra_cols:
+            self.stats = dict()
+            for column in self.non_price_columns:
+                x = df.xs(key=column, axis=1, level='Price').as_matrix()[:, 1:]  # [1:] to ignore cash columns
+                self.stats[column] = dict(mean=x.mean(), std=x.std())
+
         self.reset()
 
     def _step(self):
@@ -54,11 +67,24 @@ class DataSrc(object):
         # (eq 18) prices are divided by open price
         # While the paper says open/close, it only makes sense with close/open
         if self.scale:
-            open = data_window.xs('open', axis=1, level='Price')
-            data_window = data_window.divide(open.iloc[-1], level='Pair')
-            data_window = data_window.drop('open', axis=1, level='Price')
 
-            # TODO I want to scale price columns seperate from extra cols such as volume
+            # scale prices by dividing price columns by the last open price
+            open_price = data_window.xs('open', axis=1, level='Price')
+            last_open_price = open_price.iloc[-1]
+            for pair in data_window.columns.levels[0]:
+                data_window.loc[:, (pair, self.price_columns)] /= last_open_price[pair]
+
+        if self.scale_extra_cols:
+            # normalize non price columns
+            for pair in data_window.columns.levels[0]:
+                for column, stat in self.stats.items():
+                    x = data_window.loc[:, (pair, column)]
+                    # normalize by mean and std, then clip to 10 standard deviations
+                    x = (x - stat["mean"]) / (stat["std"] + 1e-5)
+                    x = np.clip(x, stat["mean"] - stat["std"] * 10, stat["mean"] + stat["std"] * 10)
+                    data_window.loc[:, (pair, column)] = x
+
+        data_window = data_window.drop('open', axis=1, level='Price')
 
         # convert to matrix (window, assets, prices)
         history = np.array([data_window[asset].as_matrix()
@@ -176,13 +202,14 @@ class PortfolioEnv(gym.Env):
     def __init__(self,
                  df,
                  steps=256,
-                 scale=True,
-                 augment=0.00,
                  trading_cost=0.0025,
                  time_cost=0.00,
                  window_length=50,
+                 augment=0.00,
                  output_mode='EIIE',
                  log_dir=None,
+                 scale=True,
+                 scale_extra_cols=True,
                  ):
         """
         An environment for financial portfolio management.
@@ -191,18 +218,19 @@ class PortfolioEnv(gym.Env):
             df - csv for data frame index of timestamps
                  and multi-index columns levels=[['LTCBTC'],...],['open','low','high','close']]
             steps - steps in episode
-            scale - scale data and each episode (except return)
-            augment - fraction to randomly shift data by
+            window_length - how many past observations["history"] to return
             trading_cost - cost of trade as a fraction,  e.g. 0.0025 corresponding to max rate of 0.25% at Poloniex (2017)
             time_cost - cost of holding as a fraction
-            window_length - how many past observations["history"] to return
+            augment - fraction to randomly shift data by
             output_mode: decides observation["history"] shape
-                - 'EIIE' for (assets, window, 3)
-                - 'atari' for (window, window, 3) (assets is padded)
-                - 'mlp' for (assets*window*3)
+            - 'EIIE' for (assets, window, 3)
+            - 'atari' for (window, window, 3) (assets is padded)
+            - 'mlp' for (assets*window*3)
             log_dir: directory to save plots to
+            scale - scales price data by last opening price on each episode (except return)
+            scale_extra_cols - scales non price data using mean and std for whole dataset
         """
-        self.src = DataSrc(df=df, steps=steps, scale=scale,
+        self.src = DataSrc(df=df, steps=steps, scale=scale, scale_extra_cols=scale_extra_cols,
                            augment=augment, window_length=window_length)
         self._plot = self._plot2 = self._plot3 = None
         self.output_mode = output_mode
@@ -346,7 +374,6 @@ class PortfolioEnv(gym.Env):
         # plot portfolio weights
         if not self._plot2:
             self._plot_dir2 = os.path.join(self.log_dir, 'notebook_plot_weights_' + str(time.time())) if self.log_dir else None
-            os.makedirs(self._plot_dir2)
             self._plot2 = LivePlotNotebook(
                 log_dir=self._plot_dir2, labels=self.sim.asset_names, title='weights', ylabel='weight')
         ys = [df_info['weight_' + name] for name in self.sim.asset_names]
@@ -355,7 +382,6 @@ class PortfolioEnv(gym.Env):
         # plot portfolio costs
         if not self._plot3:
             self._plot_dir3 = os.path.join(self.log_dir, 'notebook_plot_cost_' + str(time.time())) if self.log_dir else None
-            os.makedirs(self._plot_dir3)
             self._plot3 = LivePlotNotebook(
                 log_dir=self._plot_dir3, labels=['cost'], title='costs', ylabel='cost')
         ys = [df_info['cost'].cumsum()]

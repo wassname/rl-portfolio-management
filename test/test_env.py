@@ -82,20 +82,44 @@ def test_portfolio_env_hold(spec_id):
     assert df.portfolio_value.iloc[-1] > 0.9999, 'portfolio should retain value if holding bitcoin'
     assert df.portfolio_value.iloc[-1] < 1.01, 'portfolio should retain value if holding bitcoin'
 
-
-def test_scaled():
-    """Test env with scaled and not scaled option."""
-    df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
-
-    env1 = PortfolioEnv(df=df, scale=True)
+def test_scaled_non_price_cols():
+    """Test env with scaled option."""
+    df = pd.read_hdf('./data/poloniex_30m_vol.hf', key='train')
+    env1 = PortfolioEnv(df=df, scale=True, window_length=40000)
     env1.seed(0)
     obs1 = env1.reset()
 
-    env0 = PortfolioEnv(df=df, scale=False)
+    nb_cols = len(env1.src._data.columns.levels[1]) - 1 # minus cash...
+    means = obs1["history"][:, :, :].reshape((-1, nb_cols)).mean(0)
+    stds = obs1["history"][:, :, :].reshape((-1, nb_cols)).std(0)
+
+    non_price_means = means[3:]
+
+    # if normalized: for a large window, mean non_prices should be near mean=0, std=1
+    non_price_std = stds[3:]
+    np.testing.assert_almost_equal(non_price_means, [0, 0], decimal=1, err_msg='non price columns should be normalized to be close to one')
+    np.testing.assert_almost_equal(non_price_std, [1, 1], decimal=1, err_msg='non price columns should be normalized to be close to one')
+
+
+def test_scaled():
+    """Test env with scaled option."""
+    df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
+
+    env0 = PortfolioEnv(df=df, scale=False, window_length=40)
     env0.seed(0)
     obs0 = env0.reset()
 
-    assert obs0 != obs1
+    env1 = PortfolioEnv(df=df, scale=True, window_length=40)
+    env1.seed(0)
+    obs1 = env1.reset()
+
+    assert (obs0["history"] != obs1["history"]).all(), 'scaled and non-scaled data should differ'
+
+    # if scaled by last opening price: for a small window, mean prices should be near 1
+    nb_cols = len(env1.src._data.columns.levels[1]) - 1
+    means = obs1["history"][:, :, :].reshape((-1, nb_cols)).mean(0)
+    price_means = means[:3]
+    np.testing.assert_almost_equal(price_means, [1, 1, 1], decimal=1, err_msg='prices should be normalized to be close to one')
 
 
 @pytest.mark.parametrize("spec_id", env_specs)
