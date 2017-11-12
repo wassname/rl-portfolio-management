@@ -38,7 +38,6 @@ class DataSrc(object):
         self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
 
-
         # get rid of NaN's
         df = df.copy()
         df.replace(np.nan, 0, inplace=True)
@@ -48,7 +47,8 @@ class DataSrc(object):
         self.asset_names = self._data.columns.levels[0].tolist()
 
         self.price_columns = ['close', 'high', 'low', 'open']
-        self.non_price_columns = set(df.columns.levels[1]) - set(self.price_columns)
+        self.non_price_columns = set(
+            df.columns.levels[1]) - set(self.price_columns)
 
         # Stats to let us normalize non price columns
         if scale_extra_cols:
@@ -71,7 +71,8 @@ class DataSrc(object):
             open_price = data_window.xs('open', axis=1, level='Price')
             last_open_price = open_price.iloc[-1]
             for pair in data_window.columns.levels[0]:
-                data_window.loc[:, (pair, self.price_columns)] /= last_open_price[pair]
+                data_window.loc[:, (pair, self.price_columns)
+                                ] /= last_open_price[pair]
 
         if self.scale_extra_cols:
             # normalize non price columns
@@ -79,15 +80,16 @@ class DataSrc(object):
                 for column, stat in self.stats.items():
                     x = data_window.loc[:, (pair, column)]
                     # normalize by mean and std, then clip to 10 standard deviations
-                    x = (x - stat["mean"]) / (stat["std"] + 1e-10)
-                    x = np.clip(x, stat["mean"] - stat["std"] * 10, stat["mean"] + stat["std"] * 10)
+                    x = (x - stat["mean"]) / (stat["std"] + eps)
+                    x = np.clip(x, stat["mean"] - stat["std"]
+                                * 10, stat["mean"] + stat["std"] * 10)
                     data_window.loc[:, (pair, column)] = x
 
         data_window = data_window.drop('open', axis=1, level='Price')
 
         # convert to matrix (window, assets, prices)
         history = np.array([data_window[asset].as_matrix()
-                        for asset in self.asset_names])
+                            for asset in self.asset_names])
 
         self.step += 1
         done = bool(self.step >= self.steps)
@@ -148,11 +150,13 @@ class PortfolioSim(object):
 
         p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
 
-        p1 = np.clip(p1, 0, np.inf)  # can't have negative holdings in this model (no shorts)
+        # can't have negative holdings in this model (no shorts)
+        p1 = np.clip(p1, 0, np.inf)
 
         rho1 = p1 / p0 - 1  # rate of returns
         r1 = np.log((p1 + eps) / (p0 + eps))  # (eq10) log rate of return
-        reward = r1 / self.steps  # (eq22) immediate reward is log rate of return scaled by episode length
+        # (eq22) immediate reward is log rate of return scaled by episode length
+        reward = r1 / self.steps
 
         # remember for next step
         self.w0 = w1
@@ -290,7 +294,8 @@ class PortfolioEnv(gym.Env):
         weights /= weights.sum() + eps
 
         # Sanity checks
-        assert self.action_space.contains(action), 'action should be within %r but is %r' % (self.action_space, action)
+        assert self.action_space.contains(
+            action), 'action should be within %r but is %r' % (self.action_space, action)
         np.testing.assert_almost_equal(
             np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
 
@@ -315,7 +320,7 @@ class PortfolioEnv(gym.Env):
         elif self.output_mode == 'atari':
             padding = history.shape[1] - history.shape[0]
             history = np.pad(history, [[0, padding], [
-                                 0, 0], [0, 0]], mode='constant')
+                0, 0], [0, 0]], mode='constant')
         elif self.output_mode == 'mlp':
             history = history.flatten()
 
@@ -354,7 +359,8 @@ class PortfolioEnv(gym.Env):
         # plot prices and performance
         all_assets = ['BTCBTC'] + self.sim.asset_names
         if not self._plot:
-            self._plot_dir = os.path.join(self.log_dir, 'notebook_plot_prices_' + str(time.time())) if self.log_dir else None
+            self._plot_dir = os.path.join(
+                self.log_dir, 'notebook_plot_prices_' + str(time.time())) if self.log_dir else None
             self._plot = LivePlotNotebook(
                 log_dir=self._plot_dir, title='prices & performance', labels=all_assets + ["Portfolio"], ylabel='value')
         x = df_info.index
@@ -365,7 +371,8 @@ class PortfolioEnv(gym.Env):
 
         # plot portfolio weights
         if not self._plot2:
-            self._plot_dir2 = os.path.join(self.log_dir, 'notebook_plot_weights_' + str(time.time())) if self.log_dir else None
+            self._plot_dir2 = os.path.join(
+                self.log_dir, 'notebook_plot_weights_' + str(time.time())) if self.log_dir else None
             self._plot2 = LivePlotNotebook(
                 log_dir=self._plot_dir2, labels=all_assets, title='weights', ylabel='weight')
         ys = [df_info['weight_' + name] for name in all_assets]
@@ -373,7 +380,8 @@ class PortfolioEnv(gym.Env):
 
         # plot portfolio costs
         if not self._plot3:
-            self._plot_dir3 = os.path.join(self.log_dir, 'notebook_plot_cost_' + str(time.time())) if self.log_dir else None
+            self._plot_dir3 = os.path.join(
+                self.log_dir, 'notebook_plot_cost_' + str(time.time())) if self.log_dir else None
             self._plot3 = LivePlotNotebook(
                 log_dir=self._plot_dir3, labels=['cost'], title='costs', ylabel='cost')
         ys = [df_info['cost'].cumsum()]
