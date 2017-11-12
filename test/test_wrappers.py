@@ -33,6 +33,7 @@ def test_transpose():
     env = gym.make("CryptoPortfolioEIIE-v0")
     env = TransposeHistory(env)
     obs = env.reset()
+    env.observation_space.contains(obs)
     assert obs["history"].shape == transposed_shape
     # should be no problem with actions that don't sum to one
     action = env.action_space.sample()
