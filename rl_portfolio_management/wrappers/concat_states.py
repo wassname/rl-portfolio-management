@@ -38,3 +38,7 @@ class ConcatStates(gym.Wrapper):
         state = concat_states(state)
 
         return state, reward, done, info
+
+    def reset(self):
+        state = self.env.reset()
+        return concat_states(state)
