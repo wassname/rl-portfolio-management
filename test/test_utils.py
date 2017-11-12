@@ -1,8 +1,14 @@
 from rl_portfolio_management.data.utils import random_shift, normalize, scale_to_start
-from rl_portfolio_management.util import sharpe, MDD
+from rl_portfolio_management.util import sharpe, MDD, softmax
 
 import pandas as pd
 import numpy as np
+
+
+def test_softmax():
+    x = np.random.random((20, 20))
+    y = softmax(x)
+    np.testing.assert_almost_equal(y.sum(), 1)
 
 
 def test_maxdrawdown():
