@@ -16,7 +16,7 @@ class SoftmaxActions(gym.Wrapper):
     """
 
     def step(self, action):
-                # also it puts it in a list
+        # also it puts it in a list
         if isinstance(action, list):
             action = action[0]
 
@@ -25,6 +25,4 @@ class SoftmaxActions(gym.Wrapper):
 
         action = softmax(action, t=1)
 
-        observation, reward, done, info = self.env.step(action)
-
-        return observation, reward, done, info
+        return self.env.step(action)
