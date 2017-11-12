@@ -46,7 +46,8 @@ class DataSrc(object):
         # dataframe to matrix
         self.asset_names = df.columns.levels[0].tolist()
         self.features = df.columns.levels[1].tolist()
-        self._data = df.as_matrix().reshape((len(self.asset_names), -1, len(self.features)))
+        self._data = df.as_matrix().reshape(
+            (len(self.asset_names), -1, len(self.features)))
         self._times = df.index
 
         self.price_columns = ['close', 'high', 'low', 'open']
@@ -67,7 +68,7 @@ class DataSrc(object):
     def _step(self):
         # get history matrix from dataframe
         data_window = self.data[:, self.step:self.step +
-                                     self.window_length].copy()
+                                self.window_length].copy()
 
         # (eq 18) prices are divided by open price
         # While the paper says open/close, it only makes sense with close/open
@@ -75,7 +76,8 @@ class DataSrc(object):
         if self.scale:
             # scale prices by dividing price columns by the last open price
             last_open_price = data_window[:, -1, 0]
-            data_window[:, :, :nb_pc] /= last_open_price[:, np.newaxis, np.newaxis]
+            data_window[:, :, :nb_pc] /= last_open_price[:,
+                                                         np.newaxis, np.newaxis]
 
         if self.scale_extra_cols:
             # normalize non price columns
@@ -104,7 +106,7 @@ class DataSrc(object):
         data = self._data[:, self.idx -
                           self.window_length:self.idx + self.steps + 1].copy()
         self.times = self._times[self.idx -
-                          self.window_length:self.idx + self.steps + 1]
+                                 self.window_length:self.idx + self.steps + 1]
 
         # augment data to prevent overfitting
         data += np.random.normal(loc=0, scale=self.augment, size=data.shape)
