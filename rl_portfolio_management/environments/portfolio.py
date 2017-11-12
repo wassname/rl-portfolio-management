@@ -43,8 +43,11 @@ class DataSrc(object):
         df.replace(np.nan, 0, inplace=True)
         df = df.fillna(method="pad")
 
-        self._data = df
-        self.asset_names = self._data.columns.levels[0].tolist()
+        # dataframe to matrix
+        self.asset_names = df.columns.levels[0].tolist()
+        self.features = df.columns.levels[1].tolist()
+        self._data = df.as_matrix().reshape((len(self.asset_names), -1, len(self.features)))
+        self._times = df.index
 
         self.price_columns = ['close', 'high', 'low', 'open']
         self.non_price_columns = set(
@@ -52,44 +55,41 @@ class DataSrc(object):
 
         # Stats to let us normalize non price columns
         if scale_extra_cols:
-            self.stats = dict()
-            for column in self.non_price_columns:
-                x = df.xs(key=column, axis=1, level='Price').as_matrix()[:, :]
-                self.stats[column] = dict(mean=x.mean(), std=x.std())
+            x = self._data.reshape((-1, len(self.features)))
+            self.stats = dict(mean=x.mean(0), std=x.std(0))
+            # for column in self._data.columns.levels[1].tolist():
+            #     x = df.xs(key=column, axis=1, level='Price').as_matrix()[:, :]
+            #     self.stats["mean"].append(x.mean())
+            #      = dict(mean=x.mean(), std=x.std())
 
         self.reset()
 
     def _step(self):
         # get history matrix from dataframe
-        data_window = self.data.iloc[self.step:self.step +
+        data_window = self.data[:, self.step:self.step +
                                      self.window_length].copy()
 
         # (eq 18) prices are divided by open price
         # While the paper says open/close, it only makes sense with close/open
+        nb_pc = len(self.price_columns)
         if self.scale:
             # scale prices by dividing price columns by the last open price
-            open_price = data_window.xs('open', axis=1, level='Price')
-            last_open_price = open_price.iloc[-1]
-            for pair in data_window.columns.levels[0]:
-                data_window.loc[:, (pair, self.price_columns)
-                                ] /= last_open_price[pair]
+            last_open_price = data_window[:, -1, 0]
+            data_window[:, :, :nb_pc] /= last_open_price[:, np.newaxis, np.newaxis]
 
         if self.scale_extra_cols:
             # normalize non price columns
-            for pair in data_window.columns.levels[0]:
-                for column, stat in self.stats.items():
-                    x = data_window.loc[:, (pair, column)]
-                    # normalize by mean and std, then clip to 10 standard deviations
-                    x = (x - stat["mean"]) / (stat["std"] + eps)
-                    x = np.clip(x, stat["mean"] - stat["std"]
-                                * 10, stat["mean"] + stat["std"] * 10)
-                    data_window.loc[:, (pair, column)] = x
+            data_window[:, :, nb_pc:] -= self.stats["mean"][None, None, nb_pc:]
+            data_window[:, :, nb_pc:] /= self.stats["std"][None, None, nb_pc:]
+            data_window[:, :, nb_pc:] = np.clip(
+                data_window[:, :, nb_pc:],
+                self.stats["mean"][nb_pc:] - self.stats["std"][nb_pc:] * 10,
+                self.stats["mean"][nb_pc:] + self.stats["std"][nb_pc:] * 10
+            )
 
-        data_window = data_window.drop('open', axis=1, level='Price')
-
-        # convert to matrix (window, assets, prices)
-        history = np.array([data_window[asset].as_matrix()
-                            for asset in self.asset_names])
+        history = data_window[:, :, 1:]  # drop open price
+        # shape = (3, 46993, 6) (assets, time, features)
+        # history = np.transpose(history, (2,1,0))
 
         self.step += 1
         done = bool(self.step >= self.steps)
@@ -100,12 +100,14 @@ class DataSrc(object):
 
         # get data for this episode
         self.idx = np.random.randint(
-            low=self.window_length, high=len(self._data.index) - self.steps)
-        data = self._data[self.idx -
+            low=self.window_length, high=self._data.shape[1] - self.steps)
+        data = self._data[:, self.idx -
                           self.window_length:self.idx + self.steps + 1].copy()
+        self.times = self._times[self.idx -
+                          self.window_length:self.idx + self.steps + 1]
 
         # augment data to prevent overfitting
-        data = data.apply(lambda x: random_shift(x, self.augment))
+        data += np.random.normal(loc=0, scale=self.augment, size=data.shape)
 
         self.data = data
 
@@ -255,17 +257,17 @@ class PortfolioEnv(gym.Env):
             obs_shape = (
                 nb_assets,
                 window_length,
-                len(self.src._data.columns.levels[1]) - 1
+                len(self.src.features) - 1
             )
         elif output_mode == 'atari':
             obs_shape = (
                 window_length,
                 window_length,
-                len(self.src._data.columns.levels[1]) - 1
+                len(self.src.features) - 1
             )
         elif output_mode == 'mlp':
             obs_shape = (nb_assets) * window_length * \
-                (len(self.src._data.columns.levels[1]) - 1)
+                (len(self.src.features) - 1)
         else:
             raise Exception('Invalid value for output_mode: %s' %
                             self.output_mode)
@@ -309,7 +311,7 @@ class PortfolioEnv(gym.Env):
         info['market_value'] = np.cumprod(
             [inf["market_return"] for inf in self.infos + [info]])[-1]
         # add dates
-        info['date'] = self.src.data.index[self.src.step].timestamp()
+        info['date'] = self.src.times[self.src.step].timestamp()
         info['steps'] = self.src.step
 
         self.infos.append(info)

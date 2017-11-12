@@ -63,8 +63,8 @@ def test_portfolio_env_random_agent(spec_id):
 
     df_info = pd.DataFrame(env.infos)
     final_value = df_info.portfolio_value.iloc[-1]
-    assert final_value > 0.75, 'should retain most value with 20 random steps'
-    assert final_value < 1.10, 'should retain most value with 20 random steps'
+    market_value = df_info.market_value.iloc[-1]
+    np.testing.assert_allclose(final_value, market_value, rtol=0.1, err_msg='should be similar to market values after 20 random steps')
 
 
 @pytest.mark.parametrize("spec_id", env_specs)
@@ -90,7 +90,7 @@ def test_scaled_non_price_cols():
     env1.seed(0)
     obs1 = env1.reset()
 
-    nb_cols = len(env1.src._data.columns.levels[1]) - 1  # minus open...
+    nb_cols = len(env1.src.features) - 1  # minus open...
     means = obs1["history"].reshape((-1, nb_cols)).mean(0)
     stds = obs1["history"].reshape((-1, nb_cols)).std(0)
 
@@ -104,7 +104,7 @@ def test_scaled_non_price_cols():
 
 def test_scaled():
     """Test env with scaled option."""
-    df = pd.read_hdf('./data/poloniex_30m.hf', key='train')
+    df = pd.read_hdf('./data/poloniex_30m_vol.hf', key='train')
 
     env0 = PortfolioEnv(df=df, scale=False, window_length=40)
     env0.seed(0)
@@ -114,13 +114,11 @@ def test_scaled():
     env1.seed(0)
     obs1 = env1.reset()
 
-    assert (obs0["history"] != obs1["history"]).all(), 'scaled and non-scaled data should differ'
+    nb_price_cols = len(env1.src.price_columns) - 1
+    assert (obs0["history"][:, :, :nb_price_cols] != obs1["history"][:, :, :nb_price_cols]).all(), 'scaled and non-scaled data should differ'
 
     # if scaled by last opening price: for a small window, mean prices should be near 1
-    nb_cols = len(env1.src._data.columns.levels[1]) - 1
-    means = obs1["history"].reshape((-1, nb_cols)).mean(0)
-    price_means = means[:3]
-    np.testing.assert_almost_equal(price_means, [1, 1, 1], decimal=1, err_msg='prices should be normalized to be close to one')
+    np.testing.assert_allclose(obs1["history"][:, -1, :nb_price_cols], 1, rtol=0.1, err_msg='last prices should be normalized to be close to one')
 
 
 @pytest.mark.parametrize("spec_id", env_specs)
@@ -152,6 +150,7 @@ def test_invalid_actions(spec_id):
             pass
         else:
             raise Exception('Expected error for invalid action %s' % action)
+
 
 @pytest.mark.parametrize("spec_id", env_specs)
 def test_costs(spec_id):
