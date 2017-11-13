@@ -46,8 +46,9 @@ class DataSrc(object):
         # dataframe to matrix
         self.asset_names = df.columns.levels[0].tolist()
         self.features = df.columns.levels[1].tolist()
-        self._data = df.as_matrix().reshape(
-            (len(self.asset_names), -1, len(self.features)))
+        data = df.as_matrix().reshape(
+            (len(df), len(self.asset_names), len(self.features)))
+        self._data = np.transpose(data, (1, 0, 2))
         self._times = df.index
 
         self.price_columns = ['close', 'high', 'low', 'open']
