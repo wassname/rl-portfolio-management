@@ -71,14 +71,14 @@ class DataSrc(object):
         data_window = self.data[:, self.step:self.step +
                                 self.window_length].copy()
 
-        # (eq 18) prices are divided by open price
-        # While the paper says open/close, it only makes sense with close/open
+        # (eq 18) prices are divided by close price
         nb_pc = len(self.price_columns)
         if self.scale:
-            # scale prices by dividing price columns by the last open price
-            last_open_price = data_window[:, -1, 0]
-            data_window[:, :, :nb_pc] /= last_open_price[:,
-                                                         np.newaxis, np.newaxis]
+            # scale prices by dividing price columns by the 2nd to last close price
+            # last close price (asset='*', time=-2, feature=0)
+            last_close_price = data_window[:, -2, 0]
+            data_window[:, :, :nb_pc] /= last_close_price[:,
+                                                          np.newaxis, np.newaxis]
 
         if self.scale_extra_cols:
             # normalize non price columns
@@ -90,13 +90,9 @@ class DataSrc(object):
                 self.stats["mean"][nb_pc:] + self.stats["std"][nb_pc:] * 10
             )
 
-        history = data_window[:, :, 1:]  # drop open price
-        # shape = (3, 46993, 6) (assets, time, features)
-        # history = np.transpose(history, (2,1,0))
-
         self.step += 1
         done = bool(self.step >= self.steps)
-        return history, done
+        return data_window, done
 
     def reset(self):
         self.step = 0
@@ -306,7 +302,7 @@ class PortfolioEnv(gym.Env):
 
         history, done1 = self.src._step()
 
-        y1 = history[:, -1, 0]  # relative price vector (open/close)
+        y1 = history[:, -1, 0]  # relative price vector (close/open)
         y1 = np.concatenate([[1.0], y1])  # add cash price
         reward, info, done2 = self.sim._step(weights, y1)
 
