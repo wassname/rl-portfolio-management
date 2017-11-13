@@ -256,17 +256,17 @@ class PortfolioEnv(gym.Env):
             obs_shape = (
                 nb_assets,
                 window_length,
-                len(self.src.features) - 1
+                len(self.src.features)
             )
         elif output_mode == 'atari':
             obs_shape = (
                 window_length,
                 window_length,
-                len(self.src.features) - 1
+                len(self.src.features)
             )
         elif output_mode == 'mlp':
             obs_shape = (nb_assets) * window_length * \
-                (len(self.src.features) - 1)
+                (len(self.src.features))
         else:
             raise Exception('Invalid value for output_mode: %s' %
                             self.output_mode)

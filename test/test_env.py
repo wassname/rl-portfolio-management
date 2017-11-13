@@ -91,14 +91,15 @@ def test_scaled_non_price_cols():
     env1.seed(0)
     obs1 = env1.reset()
 
-    nb_cols = len(env1.src.features) - 1  # minus open...
+    nb_cols = len(env1.src.features)
+    nb_price_cols = len(env1.src.price_columns)
     means = obs1["history"].reshape((-1, nb_cols)).mean(0)
     stds = obs1["history"].reshape((-1, nb_cols)).std(0)
 
-    non_price_means = means[3:]
+    non_price_means = means[nb_price_cols:]
 
     # if normalized: for a large window, mean non_prices should be near mean=0, std=1
-    non_price_std = stds[3:]
+    non_price_std = stds[nb_price_cols:]
     np.testing.assert_almost_equal(non_price_means, [
                                    0, 0], decimal=1, err_msg='non price columns should be normalized to be close to one')
     np.testing.assert_allclose(non_price_std, [
@@ -117,7 +118,7 @@ def test_scaled():
     env1.seed(0)
     obs1 = env1.reset()
 
-    nb_price_cols = len(env1.src.price_columns) - 1
+    nb_price_cols = len(env1.src.price_columns)
     assert (obs0["history"][:, :, :nb_price_cols] != obs1["history"][:, :,
                                                                      :nb_price_cols]).all(), 'scaled and non-scaled data should differ'
 
