@@ -71,12 +71,14 @@ class DataSrc(object):
         data_window = self.data[:, self.step:self.step +
                                 self.window_length].copy()
 
-        # (eq 18) prices are divided by close price
+        # (eq.1) prices
+        y1 = data_window[:, -1, 0] / data_window[:, -2, 0]
+        y1 = np.concatenate([[1.0], y1])  # add cash price
+
+        # (eq 18) X: prices are divided by close price
         nb_pc = len(self.price_columns)
         if self.scale:
-            # scale prices by dividing price columns by the 2nd to last close price
-            # last close price (asset='*', time=-2, feature=0)
-            last_close_price = data_window[:, -2, 0]
+            last_close_price = data_window[:, -1, 0]
             data_window[:, :, :nb_pc] /= last_close_price[:,
                                                           np.newaxis, np.newaxis]
 
@@ -91,8 +93,10 @@ class DataSrc(object):
             )
 
         self.step += 1
+        history = data_window
         done = bool(self.step >= self.steps)
-        return data_window, done
+
+        return history, y1, done
 
     def reset(self):
         self.step = 0
@@ -300,10 +304,8 @@ class PortfolioEnv(gym.Env):
         np.testing.assert_almost_equal(
             np.sum(weights), 1.0, 3, err_msg='weights should sum to 1. action="%s"' % weights)
 
-        history, done1 = self.src._step()
+        history, y1, done1 = self.src._step()
 
-        y1 = history[:, -1, 0]  # relative price vector (close/open)
-        y1 = np.concatenate([[1.0], y1])  # add cash price
         reward, info, done2 = self.sim._step(weights, y1)
 
         # calculate return for buy and hold a bit of each asset
