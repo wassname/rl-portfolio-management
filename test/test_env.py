@@ -34,6 +34,9 @@ def test_src_outputs(spec_id):
         raise AssertionError(
             "These should not be equal, or we are giving future prices to the model")
 
+    # also make sure that the last price X, is 1 because we scaled it by itself as in eq 18
+    assert (X0[:, -1, 0] == 1).all()
+
 
 @pytest.mark.parametrize("spec_id", env_specs)
 def test_gym_env(spec_id):
