@@ -13,6 +13,29 @@ from rl_portfolio_management.environments import PortfolioEnv, env_specs
 
 
 @pytest.mark.parametrize("spec_id", env_specs)
+def test_src_outputs(spec_id):
+    """check we arn't giving future prices to model"""
+    env = gym.envs.spec(spec_id).make()
+    X0, y0, _ = env.src._step()
+    _, y1, _ = env.src._step()
+    # so relative price vector for calulating this steps returns is
+    # y(t) = y = v(t)/v(t-1)
+    # while y(t-1) = y_last =  v(t-1)/v(t-2)
+    # the last steps price data is
+    # X(t-1) = ..., v(t-3)/v(t-1), v(t-2)/v(t-1), v(t-1)/v(t-1)]
+    # so 1/X[-2]==y[-2] as a unit test
+    np.testing.assert_almost_equal(1 / X0[:, -2, 0], y0[1:])
+    # on the other hand these should not
+    try:
+        np.testing.assert_almost_equal(1 / X0[:, -2, 0], y1[1:])
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError(
+            "These should not be equal, or we are giving future prices to the model")
+
+
+@pytest.mark.parametrize("spec_id", env_specs)
 def test_gym_env(spec_id):
     """Run openai test to check for repeatable, observation shape, etc."""
     spec = gym.envs.spec(spec_id)
