@@ -10,7 +10,7 @@ def test_softmax():
     y = softmax(x)
     np.testing.assert_almost_equal(y.sum(), 1)
 
-    x = np.random.random([0, 1])
+    x = np.array([0, 1])
     y = softmax(x)
     assert y[0] < y[1]
     assert (y > 0).all()
