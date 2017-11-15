@@ -10,6 +10,12 @@ def test_softmax():
     y = softmax(x)
     np.testing.assert_almost_equal(y.sum(), 1)
 
+    x = np.random.random([0, 1])
+    y = softmax(x)
+    assert y[0] < y[1]
+    assert (y > 0).all()
+    assert (y < 1).all()
+
 
 def test_maxdrawdown():
     assert MDD(np.array([0, 0, 0, 0, 1, 2, 3])) == 0

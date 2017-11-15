@@ -17,7 +17,7 @@ def MDD(returns):
 def softmax(w, t=1.0):
     """softmax implemented in numpy."""
     log_eps = np.log(eps)
-    w = np.clip(w, -log_eps, log_eps)  # avoid inf/nan
+    w = np.clip(w, log_eps, -log_eps)  # avoid inf/nan
     e = np.exp(np.array(w) / t)
     dist = e / np.sum(e)
     return dist
