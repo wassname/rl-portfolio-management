@@ -117,7 +117,7 @@ for _ in range(steps):
         break
 
 # plot
-env.render('notebook', True)
+env.render('notebook')
 ```
 
 Unsuprisingly, a random agent doesn't perform well in portfolio management. If it had chosen to bet on blue then black if could have outperformed any single asset, but hindsight is 20/20.
