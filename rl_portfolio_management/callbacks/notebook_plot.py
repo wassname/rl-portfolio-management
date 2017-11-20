@@ -17,7 +17,7 @@ class LivePlotNotebook(object):
     liveplot.update(x, [ya,yb])
     """
 
-    def __init__(self, log_dir=None, episode=0, labels=[], title='', ylabel='returns'):
+    def __init__(self, log_dir=None, episode=0, labels=[], title='', ylabel='returns', colors=None, linestyles=None):
         if not matplotlib.rcParams['backend'] == 'nbAgg':
             logging.warn("The liveplot callback only work when matplotlib is using the nbAgg backend. Execute 'matplotlib.use('nbAgg', force=True)'' or '%matplotlib notebook'")
 
@@ -32,7 +32,14 @@ class LivePlotNotebook(object):
         fig, ax = plt.subplots(1, 1)
 
         for i in range(len(labels)):
-            ax.plot([0] * 20, label=labels[i], alpha=0.75, lw=2)
+            ax.plot(
+                [0] * 20,
+                label=labels[i],
+                alpha=0.75,
+                lw=2,
+                color=colors[i] if colors else None,
+                linestyle=linestyles[i] if linestyles else None,
+            )
 
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
