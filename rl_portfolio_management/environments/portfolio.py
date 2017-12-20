@@ -148,10 +148,10 @@ class PortfolioSim(object):
 
         # (eq16) cost to change portfolio
         # (excluding change in cash to avoid double counting for transaction cost)
-        mu1 = self.cost * (
+        c1 = self.cost * (
             np.abs(dw1[1:] - w1[1:])).sum()
 
-        p1 = p0 * (1 - mu1) * np.dot(y1, w0)  # (eq11) final portfolio value
+        p1 = p0 * (1 - c1) * np.dot(y1, w0)  # (eq11) final portfolio value
 
         p1 = p1 * (1 - self.time_cost)  # we can add a cost to holding
 
@@ -179,7 +179,7 @@ class PortfolioSim(object):
             "rate_of_return": rho1,
             "weights_mean": w1.mean(),
             "weights_std": w1.std(),
-            "cost": mu1,
+            "cost": c1,
         }
         # record weights and prices
         for i, name in enumerate(['BTCBTC'] + self.asset_names):
