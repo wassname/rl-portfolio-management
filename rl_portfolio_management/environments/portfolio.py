@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class DataSrc(object):
     """Acts as data provider for each new episode."""
 
-    def __init__(self, df, steps=252, scale=True, scale_extra_cols=True, augment=0.00, window_length=50):
+    def __init__(self, df, steps=252, scale=True, scale_extra_cols=True, augment=0.00, window_length=50, random_reset=True):
         """
         DataSrc.
 
@@ -31,12 +31,15 @@ class DataSrc(object):
         scale - scale the data for each episode
         scale_extra_cols - scale extra columns by global mean and std
         augment - fraction to augment the data by
+        random_reset - reset to a random time (otherwise continue through time)
         """
         self.steps = steps + 1
         self.augment = augment
+        self.random_reset = random_reset
         self.scale = scale
         self.scale_extra_cols = scale_extra_cols
         self.window_length = window_length
+        self.idx = self.window_length
 
         # get rid of NaN's
         df = df.copy()
@@ -102,8 +105,15 @@ class DataSrc(object):
         self.step = 0
 
         # get data for this episode
-        self.idx = np.random.randint(
-            low=self.window_length, high=self._data.shape[1] - self.steps)
+        if self.random_reset:
+            self.idx = np.random.randint(
+                low=self.window_length, high=self._data.shape[1] - self.steps)
+        else:
+            # continue sequentially, before reseting to start
+            if self.idx>(self._data.shape[1] - self.steps):
+                self.idx=self.window_length
+            else:
+                self.idx += self.steps
         data = self._data[:, self.idx -
                           self.window_length:self.idx + self.steps + 1].copy()
         self.times = self._times[self.idx -
@@ -218,6 +228,7 @@ class PortfolioEnv(gym.Env):
                  log_dir=None,
                  scale=True,
                  scale_extra_cols=True,
+                 random_reset=True
                  ):
         """
         An environment for financial portfolio management.
@@ -239,7 +250,8 @@ class PortfolioEnv(gym.Env):
             scale_extra_cols - scales non price data using mean and std for whole dataset
         """
         self.src = DataSrc(df=df, steps=steps, scale=scale, scale_extra_cols=scale_extra_cols,
-                           augment=augment, window_length=window_length)
+                           augment=augment, window_length=window_length,
+                           random_reset=random_reset)
         self._plot = self._plot2 = self._plot3 = None
         self.output_mode = output_mode
         self.sim = PortfolioSim(
