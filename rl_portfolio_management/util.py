@@ -6,12 +6,17 @@ def sharpe(returns, freq=30, rfr=0.0):
     return (np.sqrt(freq) * np.mean(returns - rfr)) / (np.std(returns - rfr) + eps)
 
 
-def MDD(returns):
-    """Max drawdown."""
-    peak = returns.max()
-    i = returns.argmax()
-    trough = returns[i:].min()
-    return (trough - peak) / trough
+def max_drawdown(X):
+    """By nicktids, see issue 15."""
+    mdd = 0
+    peak = X[0]
+    for x in X:
+        if x > peak: 
+            peak = x
+        dd = (peak - x) / peak
+        if dd > mdd:
+            mdd = dd
+    return mdd
 
 
 def softmax(w, t=1.0):
