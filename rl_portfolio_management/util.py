@@ -6,7 +6,7 @@ def sharpe(returns, freq=30, rfr=0.0):
     return (np.sqrt(freq) * np.mean(returns - rfr)) / (np.std(returns - rfr) + eps)
 
 
-def max_drawdown(X):
+def MDD(X):
     """By nicktids, see issue 15."""
     mdd = 0
     peak = X[0]
