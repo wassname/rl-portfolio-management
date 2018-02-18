@@ -3,8 +3,6 @@
 gym==0.9.3
 tensorflow-gpu==1.3.0
 h5py==2.7.0
-# tensorforce 0.3.5.1 a specific commit
-https://github.com/reinforceio/tensorforce/archive/4b5741d2088869e7f8f40c354bd63762c8d62833.zip
 # numbers
 tables==3.4.2
 seaborn==0.8
@@ -15,3 +13,10 @@ matplotlib==2.0.2
 tqdm==4.19.2
 seaborn==0.8
 statsmodels==0.8.0
+# for the tensorforce notebook
+tensorforce==0.3.5.1
+# for the pytorch notebook
+torch==0.3.0.post4
+torchvision==0.1.8
+tensorboardX==0.8
+
