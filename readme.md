@@ -2,7 +2,7 @@ Attempting to replicate "A Deep Reinforcement Learning Framework for the Financi
 
 **Note: the papers authors have put [the official code for the paper up and it works well](https://github.com/ZhengyaoJiang/PGPortfolio)**
 
-tl;dr I managed to get 8% growth on training data, but it disapeared on test data. However, RL papers can be very difficult to replicate due to bugs, framework differences, and hyperparameter sensistivity. 
+tl;dr I managed to get 8% growth on training data, but it disapeared on test data. So I couldn't replicate it. However, RL papers can be very difficult to replicate due to bugs, framework differences, and hyperparameter sensistivity 
 
 # About
 
