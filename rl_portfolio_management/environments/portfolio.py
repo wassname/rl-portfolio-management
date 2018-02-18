@@ -107,11 +107,11 @@ class DataSrc(object):
         # get data for this episode
         if self.random_reset:
             self.idx = np.random.randint(
-                low=self.window_length, high=self._data.shape[1] - self.steps)
+                low=self.window_length + 1, high=self._data.shape[1] - self.steps - 1)
         else:
             # continue sequentially, before reseting to start
-            if self.idx>(self._data.shape[1] - self.steps):
-                self.idx=self.window_length
+            if self.idx>(self._data.shape[1] - self.steps - 1):
+                self.idx=self.window_length + 1
             else:
                 self.idx += self.steps
         data = self._data[:, self.idx -
