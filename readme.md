@@ -125,6 +125,9 @@ Unsuprisingly, a random agent doesn't perform well in portfolio management. If i
 ![](docs/img/price_performance.png)
 ![](docs/img/weights.png)
 
+# Plotting
+
+You can run `env.render('notebook')` or extract a pandas dataframe and plot how you like. To use pandas: `df_info = pd.DataFrame(gym.unwrapped.infos)`.
 
 
 # Tests
