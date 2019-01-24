@@ -27,6 +27,6 @@ class SoftmaxActions(gym.Wrapper):
             action = list(action[k] for k in sorted(action.keys()))
 
         action = softmax(action, t=1)
-        # print('action in softmax after', action.shape)
+        # print('action in softmax after', action.shape)  
 
         return self.env.step(action)
