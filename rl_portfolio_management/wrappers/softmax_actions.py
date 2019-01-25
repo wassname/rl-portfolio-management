@@ -18,6 +18,9 @@ class SoftmaxActions(gym.Wrapper):
     def step(self, action):
         # also it puts it in a list
         # print('action in softmax', type(action))
+        if isinstance(action, tuple):
+            action = action[0]
+
         if isinstance(action, list):
             # action = action[0]
             # Junchen: change to fit new Horizon framework
@@ -27,6 +30,6 @@ class SoftmaxActions(gym.Wrapper):
             action = list(action[k] for k in sorted(action.keys()))
 
         action = softmax(action, t=1)
-        # print('action in softmax after', action.shape)  
+        #print('action in softmax after', action.shape)
 
         return self.env.step(action)
