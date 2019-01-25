@@ -33,3 +33,4 @@ class SoftmaxActions(gym.Wrapper):
         #print('action in softmax after', action.shape)
 
         return self.env.step(action)
+
