@@ -1,6 +1,9 @@
 Attempting to replicate "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem" by [Jiang et. al. 2017](https://arxiv.org/abs/1706.10059) [1].
 
-**Note: the paper's authors have put [the official code for the paper up and it works well](https://github.com/ZhengyaoJiang/PGPortfolio)**
+**Note2 (20190525):** vermouth1992 improved this environment during their final project, I reccomend you start with their [repo](https://github.com/vermouth1992/drl-portfolio-management). Also check out the [sagemaker tutorial](https://github.com/awslabs/amazon-sagemaker-examples/blob/master/reinforcement_learning/rl_portfolio_management_coach_customEnv/rl_portfolio_management_coach_customEnv.ipynb) which is based on vermouth1992's work.
+
+
+Note1 (2018): the paper's authors have put [the official code for the paper up and it works well](https://github.com/ZhengyaoJiang/PGPortfolio)
 
 tl;dr I managed to get 8% growth on training data, but it disapeared on test data. So I couldn't replicate it. However, RL papers can be very difficult to replicate due to bugs, framework differences, and hyperparameter sensistivity 
 
