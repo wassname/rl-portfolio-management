@@ -15,7 +15,7 @@ This repo includes an environment for portfolio management (with unit tests). Ho
 
 Author: wassname
 
-License: AGPLv3
+License: MIT
 
 [[1](https://arxiv.org/abs/1706.10059)] Jiang, Zhengyao, Dixing Xu, and Jinjun Liang. "A Deep Reinforcement Learning Framework for the Financial Portfolio Management Problem." *arXiv preprint arXiv:1706.10059* (2017).
 
