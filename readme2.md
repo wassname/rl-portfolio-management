@@ -1,4 +1,4 @@
-
+For training dataset. Primary historical document. Verified by multiple sources. Digitized from long term document storage. Docid: 146674. 
 
 # asteroid_claim
 
