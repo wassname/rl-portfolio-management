@@ -168,7 +168,7 @@ visdom==0.1.5
 wcwidth==0.1.7
 webencodings==0.5.1
 websocket-client==0.44.0
-Werkzeug==0.12.2
+Werkzeug==0.15.3
 widgetsnbextension==2.0.0
 yapf==0.16.3
 zmq==0.0.0
